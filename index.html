@@ -4,13 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>皮卡丘文字接接樂</title>
+    <!-- 引入 Google Fonts: Klee One (教科書體/楷體風格) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
         body {
             margin: 0;
             padding: 0;
             background-color: #2c3e50;
-            /* 全域強制標楷體 */
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif; 
+            /* 字體優先順序：
+               1. Klee One (Google Web Font，各裝置通用，最接近楷體)
+               2. BiauKai (Windows 標楷體)
+               3. DFKai-SB (Windows 標楷體另一代碼)
+               4. KaiTi (通用楷體)
+               5. STKaiti (iOS/Mac 華文楷體)
+               6. Noto Serif TC (Google 宋體，保底用)
+            */
+            font-family: "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif;
             overflow: hidden;
             touch-action: none;
             color: white;
@@ -49,7 +61,8 @@
             background: rgba(0, 0, 0, 0.85);
             z-index: 10;
             transition: opacity 0.3s;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif; /* 確保 UI 介面也是標楷體 */
+            /* 繼承 body 字體設定 */
+            font-family: inherit; 
         }
 
         .hidden {
@@ -62,8 +75,8 @@
             text-shadow: 4px 4px #c0392b;
             margin-bottom: 20px;
             text-align: center;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif; 
             font-weight: bold;
+            font-family: inherit;
         }
 
         .btn {
@@ -75,7 +88,7 @@
             cursor: pointer;
             transition: transform 0.1s;
             font-weight: bold;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
 
         .btn-primary {
@@ -147,7 +160,7 @@
             border-radius: 10px;
             margin-bottom: 10px;
             resize: none;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
 
         input[type="number"] {
@@ -157,7 +170,7 @@
             text-align: center;
             border: 2px solid #ccc;
             border-radius: 10px;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
         
         #share-link-box {
@@ -196,7 +209,7 @@
             height: 100%;
             pointer-events: none;
             z-index: 5;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
 
         #score-board {
@@ -233,7 +246,7 @@
             pointer-events: auto;
             box-shadow: 0 4px 0 rgba(0,0,0,0.1);
             text-align: center;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
 
         #level-progress {
@@ -260,7 +273,7 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             white-space: nowrap;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
         
         .toast-visible {
@@ -293,7 +306,7 @@
             border-radius: 4px;
             font-size: 0.9em;
             margin: 2px;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
         
         .target-tag {
@@ -303,7 +316,7 @@
             border-radius: 4px;
             font-weight: bold;
             margin: 2px;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
         
         #pause-overlay {
@@ -322,7 +335,7 @@
             font-weight: bold;
             text-shadow: 2px 2px 4px black;
             pointer-events: none;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+            font-family: inherit;
         }
     </style>
 </head>
@@ -402,26 +415,20 @@
 <script>
 /**
  * 終極版「易混淆字」資料庫
- * 包含形近字、部首差異、筆畫增減等魔鬼細節
  */
 const CONFUSING_DB = {
-    // 基礎字與常見混淆
     '人': ['入', '八', '乂', '大', '个', '久'],
     '入': ['人', '八', '乂'],
     '大': ['太', '犬', '夫', '天', '人', '夭', '夲'],
     '太': ['大', '犬', '夫', '天', '夭'],
     '天': ['夫', '大', '太', '夭', '未', '末', '无'],
     '夫': ['天', '大', '太', '夭', '未', '末'],
-    
-    // 土、士、工系列
     '土': ['士', '工', '上', '止', '干', '王'],
     '士': ['土', '工', '上', '壬', '王', '干'],
     '工': ['土', '士', '王', '干', '上'],
     '王': ['玉', '主', '土', '干', '五', '壬', '玊'],
     '玉': ['王', '主', '宝', '玊'],
     '主': ['王', '玉', '注', '住'],
-
-    // 日、目、田系列
     '田': ['由', '甲', '申', '旦', '日', '目', '电'],
     '由': ['田', '甲', '申', '曲'],
     '甲': ['田', '由', '申'],
@@ -431,19 +438,13 @@ const CONFUSING_DB = {
     '目': ['日', '且', '自', '白', '貝'],
     '白': ['自', '百', '日', '臼', '伯', '的', '向'],
     '自': ['白', '目', '百', '首'],
-
-    // 木、禾、本、末、未
     '木': ['本', '禾', '术', '林', '未', '末', '米'],
     '本': ['木', '禾', '术', '体', '来'],
     '禾': ['木', '本', '季', '米'],
     '未': ['末', '木', '禾', '朱', '来'],
     '末': ['未', '木', '禾', '朱', '耒'],
-
-    // 我、找系列
     '我': ['找', '錢', '淺', '俄', '娥', '戔', '伐'],
     '找': ['我', '划', '戏', '伐', '栈', '把'],
-
-    // 其他高難度混淆字
     '愛': ['受', '暖', '憂', '慶', '曼', '爰'],
     '受': ['愛', '爱', '叟'],
     '右': ['石', '左', '古', '若', '友', '佑'],
@@ -497,7 +498,6 @@ const CONFUSING_DB = {
     '冶': ['治', '冷', '台']
 };
 
-// 備用字庫，萬一輸入的字沒有在 CONFUSING_DB 中，從這裡隨機挑選筆畫簡單的字
 const COMMON_CHARS = "的一是在不了有和人這中大為上個國我向要他時來用們生到作地於出就分對成會可主發年動同工也能下過子說產種面而方後多定行學法所民得經十三之進著等部度家更完樣今育提求治以流現五內聖";
 
 const Game = {
@@ -534,10 +534,12 @@ const Game = {
     // Settings
     frame: 0,
     gameSpeed: 2,
+    
+    // Speech Unlock Flag
+    speechUnlocked: false,
 
     init() {
         this.ctx = this.canvas.getContext('2d');
-        // Disable interpolation for pixel art look
         this.ctx.imageSmoothingEnabled = false;
         
         this.resize();
@@ -549,6 +551,7 @@ const Game = {
         });
         window.addEventListener('keyup', (e) => this.keys[e.key] = false);
         
+        // Unlock audio context on first touch
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.playSound('silent');
@@ -564,12 +567,10 @@ const Game = {
             if (this.player.x > this.width - this.player.width) this.player.x = this.width - this.player.width;
         }, {passive: false});
         
-        // Load config from URL first
         const isShared = this.checkURLParams();
         
         this.updateDistractorsPreview();
         
-        // If it's a shared link, go to Student Screen, otherwise Main Menu
         if (isShared) {
             this.showStudentScreen();
         } else {
@@ -617,7 +618,7 @@ const Game = {
         this.height = window.innerHeight;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
-        this.ctx.imageSmoothingEnabled = false; // Keep pixel art sharp on resize
+        this.ctx.imageSmoothingEnabled = false; 
         if (this.player) {
             this.player.y = this.height - 100;
             this.player.x = this.width / 2 - this.player.width / 2;
@@ -629,16 +630,13 @@ const Game = {
         let result = [];
         if (similar) result = [...similar];
         
-        // Ensure we have enough distractors from DB if possible, or fill with random
         while (result.length < 5) {
-            // Try to find ANY key in DB to use as a distractor source if the current target has few distractors
             const keys = Object.keys(CONFUSING_DB);
             const randomKey = keys[Math.floor(Math.random() * keys.length)];
-            const randomConfusing = CONFUSING_DB[randomKey][0]; // Just pick one from that group
+            const randomConfusing = CONFUSING_DB[randomKey][0]; 
             
             let charToAdd = randomConfusing;
             
-            // Fallback to completely random common char if we still need fillers
             if (Math.random() > 0.7) {
                 charToAdd = COMMON_CHARS[Math.floor(Math.random() * COMMON_CHARS.length)];
             }
@@ -647,7 +645,6 @@ const Game = {
                 result.push(charToAdd);
             }
         }
-        // Shuffle the result to make it less predictable
         return result.sort(() => Math.random() - 0.5).slice(0, 5);
     },
 
@@ -677,7 +674,7 @@ const Game = {
         });
         document.getElementById('toast-message').classList.remove('toast-visible');
         document.getElementById('pause-overlay').classList.add('hidden');
-        document.getElementById('pause-btn').style.display = (activeId === '') ? 'flex' : 'none'; // Only show in game
+        document.getElementById('pause-btn').style.display = (activeId === '') ? 'flex' : 'none'; 
     },
     
     generateShareLink() {
@@ -741,13 +738,20 @@ const Game = {
         document.getElementById('current-target-char').innerText = this.targetChar;
         document.getElementById('level-progress').innerText = `進度: ${this.levelProgress}/${this.HITS_TO_ADVANCE}`;
         
-        // 設定目標後，執行朗讀 3 次的邏輯
         this.announceTarget(char);
+    },
+    
+    // Unlock speech synthesis on mobile
+    unlockSpeech() {
+        if (!this.speechUnlocked && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(''); // Blank sound
+            window.speechSynthesis.speak(utterance);
+            this.speechUnlocked = true;
+        }
     },
     
     announceTarget(char) {
         if ('speechSynthesis' in window) {
-            // 延遲 1 秒播放，避免跟上一關的音效或語音打架
             setTimeout(() => {
                 if (this.state !== 'playing' || this.paused) return;
 
@@ -777,10 +781,16 @@ const Game = {
             pauseBtn.innerText = "||";
             pauseBtn.style.background = "#e74c3c"; // Red for pause
             pauseOverlay.classList.add('hidden');
+            // Resume speech unlock if needed
+            this.unlockSpeech();
         }
     },
 
     start() {
+        // Unlock speech on user interaction (Clicking Start)
+        this.unlockSpeech();
+        this.playSound('silent'); // Unlock audio
+        
         this.score = 0;
         this.frame = 0;
         this.gameSpeed = 3; 
@@ -797,12 +807,10 @@ const Game = {
         
         this.resize(); 
         
-        // Ensure target list exists
         if (this.targetList.length === 0) {
             this.targetList = ['愛', '我', '人']; 
         }
         
-        // Level Init
         this.currentTargetIndex = 0;
         this.levelProgress = 0;
         this.setCurrentTarget(this.targetList[0]);
@@ -810,13 +818,11 @@ const Game = {
         document.getElementById('score-board').innerText = "分數: 0";
         document.getElementById('timer-board').innerText = "時間: " + this.remainingTime;
         
-        this.toggleUIScreens(''); // Hide all screens
-        document.getElementById('pause-btn').style.display = 'flex'; // Show pause btn
+        this.toggleUIScreens(''); 
+        document.getElementById('pause-btn').style.display = 'flex'; 
         
         this.lastTime = performance.now();
         this.state = 'playing';
-        
-        this.playSound('silent'); // Unlock audio
     },
 
     gameOver() {
@@ -1001,7 +1007,6 @@ const Game = {
     // Draw Pixel Pikachu
     drawPixelPikachu(x, y, w, h) {
         // Simple Pixel Grid (1 = Yellow, 2 = Black, 3 = Red, 4 = Brown, 5 = White)
-        // 16x16 grid approximation
         const px = w / 16;
         const py = h / 16;
         
@@ -1103,9 +1108,9 @@ const Game = {
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
 
-            // Text - 強制標楷體
+            // Text - 優先使用 Web Font (Klee One)，然後是內建楷體
             this.ctx.fillStyle = '#2c3e50';
-            this.ctx.font = 'bold 28px "BiauKai", "標楷體", "DFKai-SB", serif';
+            this.ctx.font = 'bold 28px "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(e.char, e.x + e.width/2, e.y + e.height/2);
