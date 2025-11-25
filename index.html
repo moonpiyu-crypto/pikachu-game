@@ -32,6 +32,7 @@
             background: rgba(255, 255, 255, 0.1);
             max-width: 100%;
             max-height: 100%;
+            image-rendering: pixelated; /* 讓像素圖保持清晰 */
         }
 
         /* UI Overlay Styles */
@@ -57,19 +58,20 @@
         h1 {
             font-size: 3rem;
             color: #f1c40f;
-            text-shadow: 2px 2px #3498db;
+            text-shadow: 4px 4px #c0392b;
             margin-bottom: 20px;
             text-align: center;
+            font-family: 'Courier New', "BiauKai", monospace; /* 復古感 */
         }
 
         .btn {
             padding: 15px 30px;
             font-size: 1.2rem;
             margin: 10px;
-            border: none;
-            border-radius: 50px;
+            border: 4px solid rgba(0,0,0,0.2);
+            border-radius: 15px;
             cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.1s;
+            transition: transform 0.1s;
             font-weight: bold;
             font-family: "BiauKai", "標楷體", serif;
         }
@@ -77,23 +79,47 @@
         .btn-primary {
             background-color: #f1c40f;
             color: #2c3e50;
-            box-shadow: 0 4px 0 #c0392b;
         }
 
         .btn-primary:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #c0392b;
+            transform: scale(0.95);
         }
 
         .btn-secondary {
             background-color: #3498db;
             color: white;
-            box-shadow: 0 4px 0 #2980b9;
+        }
+        
+        .btn-green {
+            background-color: #2ecc71;
+            color: white;
         }
 
-        .btn-secondary:active {
+        /* Pause Button */
+        #pause-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px; /* Moves target display slightly */
+            width: 50px;
+            height: 50px;
+            background: #e74c3c;
+            border: 3px solid white;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 20;
+            pointer-events: auto;
+            box-shadow: 0 4px 0 #c0392b;
+        }
+        
+        #pause-btn:active {
             transform: translateY(4px);
-            box-shadow: 0 0 0 #2980b9;
+            box-shadow: none;
         }
 
         .panel {
@@ -131,25 +157,12 @@
             font-family: "BiauKai", "標楷體", serif;
         }
 
-        .setting-row {
-            margin-bottom: 15px;
-            text-align: left;
-            padding: 0 10px;
-        }
-
-        .info-text {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-        
         /* QR Code Section */
         #share-section {
             margin-top: 20px;
             padding-top: 15px;
             border-top: 2px dashed #eee;
-            display: none; /* Hidden by default until generated */
+            display: none; 
         }
         
         #qr-code-img {
@@ -204,22 +217,23 @@
         #target-display {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 50%;
+            transform: translateX(-50%);
             font-size: 1.2rem;
             color: #333;
-            background: rgba(255,255,255,0.8);
-            padding: 5px 15px;
-            border-radius: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 5px 20px;
+            border-radius: 20px;
             border: 3px solid #f1c40f;
             pointer-events: auto;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+            text-align: center;
         }
 
         #level-progress {
             font-size: 0.8rem;
             color: #666;
             margin-top: 2px;
-            text-align: center;
         }
 
         #toast-message {
@@ -283,14 +297,22 @@
             margin: 2px;
         }
         
-        .btn-green {
-            background-color: #2ecc71;
+        #pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 15;
             color: white;
-            box-shadow: 0 4px 0 #27ae60;
-        }
-        .btn-green:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #27ae60;
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px black;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -306,6 +328,8 @@
             接住: <span id="current-target-char" style="color:#e74c3c; font-size:1.5em; font-weight:bold;">?</span>
             <div id="level-progress">進度: 0/5</div>
         </div>
+        <div id="pause-btn" onclick="Game.togglePause()">||</div>
+        <div id="pause-overlay" class="hidden">暫停中</div>
         <div id="toast-message">下一關！</div>
     </div>
 
@@ -317,20 +341,27 @@
         <div class="mobile-hint">移動皮卡丘接住正確的字！<br>電腦：左右方向鍵 / 手機：按住螢幕移動</div>
     </div>
 
+    <!-- Student Ready Screen (Skipped menu) -->
+    <div id="student-screen" class="ui-screen hidden">
+        <h1>準備開始</h1>
+        <p style="font-size: 1.2rem; margin-bottom: 20px;">老師已經設定好題目囉！</p>
+        <button class="btn btn-primary" style="font-size: 1.5rem; padding: 20px 50px;" onclick="Game.start()">點擊開始遊戲</button>
+    </div>
+
     <!-- Teacher Panel -->
     <div id="teacher-screen" class="ui-screen hidden">
         <div class="panel">
             <h2>題目與設定</h2>
             
-            <div class="setting-row">
+            <div style="margin-bottom: 15px; text-align: left; padding: 0 10px;">
                 <label for="time-input">遊戲時間 (秒)：</label>
                 <input type="number" id="time-input" value="60" min="10" max="300">
             </div>
 
-            <p class="info-text">請輸入要練習的文字 (可一次輸入多個字)。<br>遊戲將會依序進行練習。</p>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">請輸入要練習的文字 (可一次輸入多個字)。</p>
             <textarea id="target-input" placeholder="例如：愛我人日月星" oninput="Game.updateDistractorsPreview()">愛我人</textarea>
             
-            <p class="info-text">AI 將自動為每個字尋找相似/易混淆字。</p>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">AI 將自動為每個字尋找相似/易混淆字。</p>
             
             <div id="distractor-container" class="distractor-preview">
                 <!-- Preview generated chars here -->
@@ -340,7 +371,7 @@
             <button class="btn btn-green" onclick="Game.generateShareLink()">產生分享 QR Code</button>
             
             <div id="share-section">
-                <p class="info-text">讓學生掃描此 QR Code，<br>即可玩這組設定！</p>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">讓學生掃描此 QR Code，<br>即可直接進入遊戲！</p>
                 <img id="qr-code-img" alt="QR Code" src="">
                 <input type="text" id="share-link-box" readonly onclick="this.select()">
             </div>
@@ -360,20 +391,21 @@
 
 <script>
 /**
- * 簡易的「易混淆字」資料庫
+ * 升級版「易混淆字」資料庫 - 更相似，更具挑戰性
  */
 const CONFUSING_DB = {
     '人': ['入', '八', '乂', '大', '个'],
-    '大': ['太', '犬', '夫', '天', '人'],
+    '大': ['太', '犬', '夫', '天', '人', '夭'],
+    '天': ['夫', '大', '太', '夭', '未', '末'],
     '土': ['士', '工', '上', '止', '干'],
     '士': ['土', '工', '上', '壬', '王'],
-    '王': ['玉', '主', '土', '干', '五'],
-    '田': ['由', '甲', '申', '旦', '日'],
-    '日': ['曰', '目', '田', '白', '旦'],
-    '白': ['自', '百', '日', '臼', '伯'],
-    '木': ['本', '禾', '术', '林', '未'],
+    '王': ['玉', '主', '土', '干', '五', '壬'],
+    '田': ['由', '甲', '申', '旦', '日', '目'],
+    '日': ['曰', '目', '田', '白', '旦', '口'],
+    '白': ['自', '百', '日', '臼', '伯', '的'],
+    '木': ['本', '禾', '术', '林', '未', '末'],
     '本': ['木', '禾', '术', '体', '来'],
-    '我': ['找', '錢', '淺', '俄', '娥'],
+    '我': ['找', '錢', '淺', '俄', '娥', '戔'],
     '找': ['我', '划', '戏', '伐', '栈'],
     '愛': ['受', '暖', '憂', '慶', '曼'],
     '右': ['石', '左', '古', '若', '友'],
@@ -384,7 +416,14 @@ const CONFUSING_DB = {
     '手': ['毛', '牛', '乎', '于', '才'],
     '水': ['氷', '永', '木', '火', '求'],
     '鳥': ['烏', '馬', '島', '焉', '梟'],
-    '烏': ['鳥', '馬', '焉', '黑', '嗚']
+    '烏': ['鳥', '馬', '焉', '黑', '嗚'],
+    '未': ['末', '木', '禾', '朱'],
+    '末': ['未', '木', '禾', '朱'],
+    '很': ['根', '銀', '狠', '恨'],
+    '根': ['很', '銀', '狠', '恨'],
+    '瓜': ['爪', '爬', '抓'],
+    '爪': ['瓜', '爬', '抓'],
+    '友': ['反', '支', '皮', '又']
 };
 
 const COMMON_CHARS = "的一是在不了有和人這中大為上個國我向要他時來用們生到作地於出就分對成會可主發年動同工也能下過子說產種面而方後多定行學法所民得經十三之進著等部度家更完樣今育提求治以流現五內聖";
@@ -395,6 +434,7 @@ const Game = {
     width: 0,
     height: 0,
     state: 'start', 
+    paused: false,
     score: 0,
     
     // Timer
@@ -411,7 +451,7 @@ const Game = {
     HITS_TO_ADVANCE: 5,
     
     // Game Entities
-    player: { x: 0, y: 0, width: 60, height: 60, speed: 7 },
+    player: { x: 0, y: 0, width: 64, height: 64, speed: 7, shockTimer: 0 },
     enemies: [],
     particles: [],
     
@@ -425,10 +465,16 @@ const Game = {
 
     init() {
         this.ctx = this.canvas.getContext('2d');
+        // Disable interpolation for pixel art look
+        this.ctx.imageSmoothingEnabled = false;
+        
         this.resize();
         window.addEventListener('resize', () => this.resize());
         
-        window.addEventListener('keydown', (e) => this.keys[e.key] = true);
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') this.togglePause();
+            this.keys[e.key] = true;
+        });
         window.addEventListener('keyup', (e) => this.keys[e.key] = false);
         
         this.canvas.addEventListener('touchstart', (e) => {
@@ -446,10 +492,18 @@ const Game = {
             if (this.player.x > this.width - this.player.width) this.player.x = this.width - this.player.width;
         }, {passive: false});
         
-        // Check URL Params for shared configuration
-        this.checkURLParams();
+        // Load config from URL first
+        const isShared = this.checkURLParams();
         
         this.updateDistractorsPreview();
+        
+        // If it's a shared link, go to Student Screen, otherwise Main Menu
+        if (isShared) {
+            this.showStudentScreen();
+        } else {
+            this.showMenu();
+        }
+        
         this.loop(0);
     },
     
@@ -462,7 +516,6 @@ const Game = {
         
         if (sharedWords) {
             try {
-                // Decode assuming it might be encoded
                 const decoded = decodeURIComponent(sharedWords);
                 if (decoded.length > 0) {
                     this.targetList = decoded.split('');
@@ -480,14 +533,11 @@ const Game = {
             }
         }
         
-        // Sync UI inputs with loaded config
+        // Sync UI
         document.getElementById('target-input').value = this.targetList.join('');
         document.getElementById('time-input').value = this.gameDuration;
         
-        // If config was found in URL, maybe auto-show menu or toast
-        if (configFound) {
-            console.log("Loaded configuration from URL");
-        }
+        return configFound;
     },
 
     resize() {
@@ -495,8 +545,9 @@ const Game = {
         this.height = window.innerHeight;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
+        this.ctx.imageSmoothingEnabled = false; // Keep pixel art sharp on resize
         if (this.player) {
-            this.player.y = this.height - 90;
+            this.player.y = this.height - 100;
             this.player.x = this.width / 2 - this.player.width / 2;
         }
     },
@@ -505,10 +556,21 @@ const Game = {
         let similar = CONFUSING_DB[target];
         let result = [];
         if (similar) result = [...similar];
+        // Ensure we have enough distractors from DB if possible, or fill with random
         while (result.length < 5) {
-            const randomChar = COMMON_CHARS[Math.floor(Math.random() * COMMON_CHARS.length)];
-            if (randomChar !== target && !result.includes(randomChar)) {
-                result.push(randomChar);
+            // Prefer confusing chars from other entries if DB is small for this char
+            const keys = Object.keys(CONFUSING_DB);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            const randomConfusing = CONFUSING_DB[randomKey][0];
+            
+            let charToAdd = randomConfusing;
+            // Fallback to completely random common char
+            if (Math.random() > 0.5) {
+                charToAdd = COMMON_CHARS[Math.floor(Math.random() * COMMON_CHARS.length)];
+            }
+
+            if (charToAdd !== target && !result.includes(charToAdd)) {
+                result.push(charToAdd);
             }
         }
         return result.slice(0, 5);
@@ -516,20 +578,31 @@ const Game = {
 
     showMenu() {
         this.state = 'start';
-        document.getElementById('start-screen').classList.remove('hidden');
-        document.getElementById('game-over-screen').classList.add('hidden');
-        document.getElementById('teacher-screen').classList.add('hidden');
-        document.getElementById('toast-message').classList.remove('toast-visible');
+        this.toggleUIScreens('start-screen');
+    },
+    
+    showStudentScreen() {
+        this.state = 'start';
+        this.toggleUIScreens('student-screen');
     },
 
     showTeacherPanel() {
         this.state = 'setup';
-        document.getElementById('start-screen').classList.add('hidden');
-        document.getElementById('teacher-screen').classList.remove('hidden');
-        document.getElementById('share-section').style.display = 'none'; // Reset share section
-        
-        // Inputs are already synced in init or prev save
+        this.toggleUIScreens('teacher-screen');
+        document.getElementById('share-section').style.display = 'none';
         this.updateDistractorsPreview();
+    },
+    
+    toggleUIScreens(activeId) {
+        const screens = ['start-screen', 'student-screen', 'teacher-screen', 'game-over-screen'];
+        screens.forEach(id => {
+            const el = document.getElementById(id);
+            if (id === activeId) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        });
+        document.getElementById('toast-message').classList.remove('toast-visible');
+        document.getElementById('pause-overlay').classList.add('hidden');
+        document.getElementById('pause-btn').style.display = (activeId === '') ? 'flex' : 'none'; // Only show in game
     },
     
     generateShareLink() {
@@ -542,28 +615,19 @@ const Game = {
         }
         
         const cleanInput = input.replace(/\s/g, '');
-        
-        // Construct URL
-        // Get the base URL (without existing query params)
         const baseUrl = window.location.href.split('?')[0];
         const newUrl = `${baseUrl}?words=${encodeURIComponent(cleanInput)}&time=${timeInput}`;
         
-        // Show in UI
         const shareSection = document.getElementById('share-section');
         const qrImg = document.getElementById('qr-code-img');
         const linkBox = document.getElementById('share-link-box');
         
         shareSection.style.display = 'block';
         linkBox.value = newUrl;
-        
-        // Use a public QR code API
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(newUrl)}`;
         
-        // Scroll to bottom
         const panel = document.querySelector('.panel');
-        setTimeout(() => {
-            panel.scrollTop = panel.scrollHeight;
-        }, 100);
+        setTimeout(() => { panel.scrollTop = panel.scrollHeight; }, 100);
     },
 
     updateDistractorsPreview() {
@@ -588,14 +652,9 @@ const Game = {
         
         if (input && input.length > 0 && !isNaN(timeInput) && timeInput > 0) {
             const cleanInput = input.replace(/\s/g, '');
-            if (cleanInput.length === 0) {
-                alert("請輸入有效的文字");
-                return;
-            }
-            
             this.targetList = cleanInput.split('');
             this.gameDuration = timeInput;
-            this.start(); // Directly start game
+            this.start();
         } else {
             alert("請輸入有效的文字與時間");
         }
@@ -607,6 +666,23 @@ const Game = {
         document.getElementById('current-target-char').innerText = this.targetChar;
         document.getElementById('level-progress').innerText = `進度: ${this.levelProgress}/${this.HITS_TO_ADVANCE}`;
     },
+    
+    togglePause() {
+        if (this.state !== 'playing') return;
+        this.paused = !this.paused;
+        const pauseBtn = document.getElementById('pause-btn');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        
+        if (this.paused) {
+            pauseBtn.innerText = "▶";
+            pauseBtn.style.background = "#2ecc71"; // Green for play
+            pauseOverlay.classList.remove('hidden');
+        } else {
+            pauseBtn.innerText = "||";
+            pauseBtn.style.background = "#e74c3c"; // Red for pause
+            pauseOverlay.classList.add('hidden');
+        }
+    },
 
     start() {
         this.score = 0;
@@ -615,35 +691,42 @@ const Game = {
         this.remainingTime = this.gameDuration;
         this.enemies = [];
         this.particles = [];
+        this.paused = false;
+        this.player.shockTimer = 0;
+        
+        // Reset Pause UI
+        document.getElementById('pause-btn').innerText = "||";
+        document.getElementById('pause-btn').style.background = "#e74c3c";
+        document.getElementById('pause-overlay').classList.add('hidden');
+        
         this.resize(); 
         
-        // Level Init
-        this.currentTargetIndex = 0;
-        this.levelProgress = 0;
-        
-        // Reload list from current internal state (which might have come from URL or Input)
-        // Ensure there is at least something
+        // Ensure target list exists
         if (this.targetList.length === 0) {
             this.targetList = ['愛', '我', '人']; 
         }
         
+        // Level Init
+        this.currentTargetIndex = 0;
+        this.levelProgress = 0;
         this.setCurrentTarget(this.targetList[0]);
 
         document.getElementById('score-board').innerText = "分數: 0";
         document.getElementById('timer-board').innerText = "時間: " + this.remainingTime;
-        document.getElementById('start-screen').classList.add('hidden');
-        document.getElementById('game-over-screen').classList.add('hidden');
-        document.getElementById('teacher-screen').classList.add('hidden');
-        document.getElementById('toast-message').classList.remove('toast-visible');
+        
+        this.toggleUIScreens(''); // Hide all screens
+        document.getElementById('pause-btn').style.display = 'flex'; // Show pause btn
         
         this.lastTime = performance.now();
         this.state = 'playing';
+        
+        this.playSound('silent'); // Unlock audio
     },
 
     gameOver() {
         this.state = 'gameover';
         document.getElementById('final-score').innerText = "得分: " + this.score;
-        document.getElementById('game-over-screen').classList.remove('hidden');
+        this.toggleUIScreens('game-over-screen');
     },
 
     levelUp() {
@@ -701,6 +784,10 @@ const Game = {
             });
         }
     },
+    
+    triggerShock() {
+        this.player.shockTimer = 30; // 30 frames of shock
+    },
 
     checkCollision(rect1, rect2) {
         return (rect1.x < rect2.x + rect2.width &&
@@ -709,8 +796,21 @@ const Game = {
                 rect1.y + rect1.height > rect2.y);
     },
 
+    speak(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW'; // Set language to Traditional Chinese
+            utterance.rate = 1; // Normal speed
+            window.speechSynthesis.cancel(); // Cancel previous speech to avoid queue buildup
+            window.speechSynthesis.speak(utterance);
+        }
+    },
+
     update(timestamp) {
-        if (this.state !== 'playing') return;
+        if (this.state !== 'playing' || this.paused) {
+            this.lastTime = timestamp; // Prevent time jump
+            return;
+        }
 
         const deltaTime = timestamp - this.lastTime;
         if (deltaTime >= 1000) {
@@ -724,6 +824,9 @@ const Game = {
         }
 
         this.frame++;
+        
+        // Update Shock Timer
+        if (this.player.shockTimer > 0) this.player.shockTimer--;
 
         if (this.frame % 600 === 0) {
             this.gameSpeed += 0.2;
@@ -760,6 +863,7 @@ const Game = {
                     this.levelProgress++;
                     this.createParticles(e.x + e.width/2, e.y + e.height/2, '#f1c40f');
                     this.playSound('catch_good');
+                    this.speak(e.char); // Speak the character
                     
                     if (this.levelProgress >= this.HITS_TO_ADVANCE) {
                         this.levelUp();
@@ -771,6 +875,7 @@ const Game = {
                     this.score -= 5;
                     this.createParticles(e.x + e.width/2, e.y + e.height/2, '#e74c3c');
                     this.playSound('catch_bad');
+                    this.triggerShock(); // Trigger shock animation
                 }
                 document.getElementById('score-board').innerText = "分數: " + this.score;
                 
@@ -795,93 +900,113 @@ const Game = {
             if (p.life <= 0) this.particles.splice(i, 1);
         }
     },
+    
+    // Draw Pixel Pikachu
+    drawPixelPikachu(x, y, w, h) {
+        // Simple Pixel Grid (1 = Yellow, 2 = Black, 3 = Red, 4 = Brown, 5 = White)
+        // 16x16 grid approximation
+        const px = w / 16;
+        const py = h / 16;
+        
+        // Draw Ears (Left/Right)
+        this.ctx.fillStyle = '#000'; // Black tips
+        this.ctx.fillRect(x + 1*px, y + 0*px, 2*px, 2*px);
+        this.ctx.fillRect(x + 13*px, y + 0*px, 2*px, 2*px);
+        
+        this.ctx.fillStyle = '#F1C40F'; // Yellow Body/Ears
+        this.ctx.fillRect(x + 2*px, y + 2*px, 2*px, 3*px); // L Ear
+        this.ctx.fillRect(x + 12*px, y + 2*px, 2*px, 3*px); // R Ear
+        
+        // Head Main
+        this.ctx.fillRect(x + 3*px, y + 4*px, 10*px, 8*px);
+        this.ctx.fillRect(x + 2*px, y + 6*px, 12*px, 5*px); // Widen face
+        
+        // Eyes
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(x + 4*px, y + 6*px, 2*px, 2*px);
+        this.ctx.fillRect(x + 10*px, y + 6*px, 2*px, 2*px);
+        // Eye Sparkle
+        this.ctx.fillStyle = '#FFF';
+        this.ctx.fillRect(x + 5*px, y + 6.2*px, 0.5*px, 0.5*px);
+        this.ctx.fillRect(x + 11*px, y + 6.2*px, 0.5*px, 0.5*px);
+        
+        // Cheeks (Red)
+        this.ctx.fillStyle = '#E74C3C';
+        this.ctx.fillRect(x + 2*px, y + 8*px, 2*px, 2*px);
+        this.ctx.fillRect(x + 12*px, y + 8*px, 2*px, 2*px);
+        
+        // Nose
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(x + 7.5*px, y + 8.5*px, 1*px, 0.5*px);
+        
+        // Mouth
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 2;
+        this.ctx.moveTo(x + 7*px, y + 9.5*px);
+        this.ctx.lineTo(x + 8*px, y + 10*px);
+        this.ctx.lineTo(x + 9*px, y + 9.5*px);
+        this.ctx.stroke();
+        
+        // Body
+        this.ctx.fillStyle = '#F1C40F';
+        this.ctx.fillRect(x + 4*px, y + 11*px, 8*px, 5*px);
+        
+        // Tail
+        this.ctx.fillStyle = '#8B4513'; // Brown base
+        this.ctx.fillRect(x + 4*px, y + 12*px, 2*px, 1*px);
+        this.ctx.fillStyle = '#F1C40F'; // Yellow lightning
+        this.ctx.fillRect(x + 1*px, y + 7*px, 2*px, 1*px);
+        this.ctx.fillRect(x + 2*px, y + 8*px, 1*px, 2*px);
+        this.ctx.fillRect(x + 3*px, y + 10*px, 1*px, 2*px);
+        
+        // Shock Effect Overlay
+        if (this.player.shockTimer > 0) {
+            this.ctx.strokeStyle = (Math.floor(this.frame / 2) % 2 === 0) ? '#FFFF00' : '#87CEEB';
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            // Jagged lines
+            for (let i = 0; i < 8; i++) {
+                let angle = (i / 8) * Math.PI * 2;
+                let r = w/1.5 + Math.random() * 10;
+                let sx = x + w/2 + Math.cos(angle) * r;
+                let sy = y + h/2 + Math.sin(angle) * r;
+                if (i===0) this.ctx.moveTo(sx, sy);
+                else this.ctx.lineTo(sx, sy);
+            }
+            this.ctx.closePath();
+            this.ctx.stroke();
+        }
+    },
 
     draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         if (this.state !== 'playing') return;
 
-        const px = this.player.x;
-        const py = this.player.y;
-        const pw = this.player.width;
-        const ph = this.player.height;
-        
-        this.ctx.fillStyle = '#f1c40f';
-        this.ctx.beginPath();
-        this.ctx.moveTo(px + 10, py + 10);
-        this.ctx.lineTo(px - 5, py - 15);
-        this.ctx.lineTo(px + 20, py + 10);
-        this.ctx.fill();
-        this.ctx.fillStyle = '#000'; 
-        this.ctx.beginPath();
-        this.ctx.moveTo(px, py - 6);
-        this.ctx.lineTo(px - 5, py - 15);
-        this.ctx.lineTo(px + 8, py - 3);
-        this.ctx.fill();
+        // Draw Player (Pixel Art)
+        this.drawPixelPikachu(this.player.x, this.player.y, this.player.width, this.player.height);
 
-        this.ctx.fillStyle = '#f1c40f';
-        this.ctx.beginPath();
-        this.ctx.moveTo(px + pw - 20, py + 10);
-        this.ctx.lineTo(px + pw + 5, py - 15);
-        this.ctx.lineTo(px + pw - 10, py + 10);
-        this.ctx.fill();
-        this.ctx.fillStyle = '#000'; 
-        this.ctx.beginPath();
-        this.ctx.moveTo(px + pw, py - 6);
-        this.ctx.lineTo(px + pw + 5, py - 15);
-        this.ctx.lineTo(px + pw - 8, py - 3);
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#f1c40f';
-        this.ctx.beginPath();
-        this.ctx.ellipse(px + pw/2, py + ph/2, pw/2, ph/2 - 5, 0, 0, Math.PI*2);
-        this.ctx.fill();
-        
-        this.ctx.fillStyle = '#e74c3c';
-        this.ctx.beginPath();
-        this.ctx.arc(px + 10, py + ph/2 + 10, 6, 0, Math.PI*2);
-        this.ctx.arc(px + pw - 10, py + ph/2 + 10, 6, 0, Math.PI*2);
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#000';
-        this.ctx.beginPath();
-        this.ctx.arc(px + 15, py + ph/2 - 5, 5, 0, Math.PI*2);
-        this.ctx.arc(px + pw - 15, py + ph/2 - 5, 5, 0, Math.PI*2);
-        this.ctx.fill();
-        this.ctx.fillStyle = '#fff';
-        this.ctx.beginPath();
-        this.ctx.arc(px + 17, py + ph/2 - 7, 2, 0, Math.PI*2);
-        this.ctx.arc(px + pw - 13, py + ph/2 - 7, 2, 0, Math.PI*2);
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#000';
-        this.ctx.beginPath();
-        this.ctx.moveTo(px + pw/2 - 2, py + ph/2 + 2);
-        this.ctx.lineTo(px + pw/2 + 2, py + ph/2 + 2);
-        this.ctx.lineTo(px + pw/2, py + ph/2 + 5);
-        this.ctx.fill();
-        
-        this.ctx.beginPath();
-        this.ctx.arc(px + pw/2, py + ph/2 + 5, 5, 0, Math.PI, false);
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 1;
-        this.ctx.stroke();
-
+        // Enemies (Falling bubbles)
         this.enemies.forEach(e => {
+            // Shadow
             this.ctx.fillStyle = 'rgba(0,0,0,0.1)';
             this.ctx.beginPath();
             this.ctx.arc(e.x + e.width/2 + 3, e.y + e.height/2 + 3, e.width/2, 0, Math.PI*2);
             this.ctx.fill();
 
+            // Bubble
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
             this.ctx.beginPath();
             this.ctx.arc(e.x + e.width/2, e.y + e.height/2, e.width/2, 0, Math.PI*2);
             this.ctx.fill();
             
+            // Border
             this.ctx.strokeStyle = '#3498db';
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
 
+            // Text
             this.ctx.fillStyle = '#2c3e50';
             this.ctx.font = 'bold 28px "BiauKai", "標楷體", serif';
             this.ctx.textAlign = 'center';
@@ -889,6 +1014,7 @@ const Game = {
             this.ctx.fillText(e.char, e.x + e.width/2, e.y + e.height/2);
         });
 
+        // Particles
         this.particles.forEach(p => {
             this.ctx.fillStyle = p.color;
             this.ctx.fillRect(p.x, p.y, 5, 5);
@@ -923,13 +1049,14 @@ const Game = {
             osc.start(now);
             osc.stop(now + 0.2);
         } else if (type === 'catch_bad') {
+            // Electric buzz sound
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.linearRampToValueAtTime(100, now + 0.2);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
             osc.start(now);
-            osc.stop(now + 0.2);
+            osc.stop(now + 0.3);
         } else if (type === 'levelup') {
             osc.type = 'square';
             osc.frequency.setValueAtTime(400, now);
