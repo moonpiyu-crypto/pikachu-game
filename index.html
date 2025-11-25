@@ -799,9 +799,10 @@ const Game = {
     speak(text) {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-TW'; // Set language to Traditional Chinese
-            utterance.rate = 1; // Normal speed
-            window.speechSynthesis.cancel(); // Cancel previous speech to avoid queue buildup
+            utterance.lang = 'zh-TW'; 
+            utterance.volume = 1; // 強制設定為最大音量
+            utterance.rate = 0.9; // 稍微放慢語速，增加清晰度與份量感
+            window.speechSynthesis.cancel(); 
             window.speechSynthesis.speak(utterance);
         }
     },
@@ -1044,7 +1045,7 @@ const Game = {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(500, now);
             osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
-            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.setValueAtTime(0.05, now); // 降低音效音量 (原為 0.1)，突顯人聲讀音
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
             osc.start(now);
             osc.stop(now + 0.2);
