@@ -14,14 +14,6 @@
             margin: 0;
             padding: 0;
             background-color: #2c3e50;
-            /* 字體優先順序：
-               1. Klee One (Google Web Font，各裝置通用，最接近楷體)
-               2. BiauKai (Windows 標楷體)
-               3. DFKai-SB (Windows 標楷體另一代碼)
-               4. KaiTi (通用楷體)
-               5. STKaiti (iOS/Mac 華文楷體)
-               6. Noto Serif TC (Google 宋體，保底用)
-            */
             font-family: "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif;
             overflow: hidden;
             touch-action: none;
@@ -58,10 +50,9 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 10;
             transition: opacity 0.3s;
-            /* 繼承 body 字體設定 */
             font-family: inherit; 
         }
 
@@ -80,9 +71,9 @@
         }
 
         .btn {
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            margin: 10px;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            margin: 15px;
             border: 4px solid rgba(0,0,0,0.2);
             border-radius: 15px;
             cursor: pointer;
@@ -110,6 +101,56 @@
             color: white;
         }
 
+        /* Selector Styles */
+        .selector-group {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 15px;
+            margin: 10px 0;
+            text-align: center;
+            width: 90%;
+            max-width: 700px;
+        }
+        
+        .selector-label {
+            font-size: 1.3rem;
+            color: #f1c40f;
+            margin-bottom: 10px;
+            display: block;
+            font-weight: bold;
+        }
+        
+        .radio-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .radio-label {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 10px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+        
+        input[type="radio"] {
+            display: none;
+        }
+        
+        input[type="radio"]:checked + .radio-label {
+            background: #f1c40f;
+            color: #c0392b;
+            border-color: #c0392b;
+            transform: scale(1.1);
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
         /* Pause Button */
         #pause-btn {
             position: absolute;
@@ -130,7 +171,7 @@
             z-index: 20;
             pointer-events: auto;
             box-shadow: 0 4px 0 #c0392b;
-            font-family: Arial, sans-serif; /* 符號用 Arial 比較置中 */
+            font-family: Arial, sans-serif;
         }
         
         #pause-btn:active {
@@ -182,10 +223,9 @@
             background: #f0f0f0;
             border: 1px solid #ccc;
             word-break: break-all;
-            font-family: sans-serif; /* 網址用回預設字體比較易讀 */
+            font-family: sans-serif;
         }
 
-        /* QR Code Section */
         #share-section {
             margin-top: 20px;
             padding-top: 15px;
@@ -335,7 +375,7 @@
             font-weight: bold;
             text-shadow: 2px 2px 4px black;
             pointer-events: none;
-            font-family: inherit;
+            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
         }
     </style>
 </head>
@@ -356,19 +396,50 @@
         <div id="toast-message">下一關！</div>
     </div>
 
-    <!-- Main Menu -->
+    <!-- Main Menu (Cleaned up) -->
     <div id="start-screen" class="ui-screen">
         <h1>皮卡丘<br>文字接接樂</h1>
+        
         <button class="btn btn-primary" onclick="Game.showTeacherPanel()">我是老師 (設定題目)</button>
-        <button class="btn btn-secondary" onclick="Game.start()">開始遊戲</button>
-        <div class="mobile-hint">移動皮卡丘接住正確的字！<br>電腦：左右方向鍵 / 手機：按住螢幕移動</div>
+        <button class="btn btn-secondary" onclick="Game.showSetupScreen(false)">開始遊戲</button>
+        
+        <div class="mobile-hint">電腦：使用左右方向鍵 / 手機：按住螢幕滑動</div>
     </div>
 
-    <!-- Student Ready Screen (Skipped menu) -->
-    <div id="student-screen" class="ui-screen hidden">
+    <!-- Game Setup Screen (For both Student & Solo) -->
+    <div id="setup-screen" class="ui-screen hidden">
         <h1>準備開始</h1>
-        <p style="font-size: 1.2rem; margin-bottom: 20px;">老師已經設定好題目囉！</p>
-        <button class="btn btn-primary" style="font-size: 1.5rem; padding: 20px 50px;" onclick="Game.start()">點擊開始遊戲</button>
+        <!-- Teacher Message (Hidden by default) -->
+        <div id="teacher-msg" style="display:none; font-size: 1.2rem; color: #f1c40f; margin-bottom: 10px;">
+            ★ 老師已經設定好題目囉！
+        </div>
+        
+        <!-- Character Selection -->
+        <div class="selector-group">
+            <span class="selector-label">選擇你的角色</span>
+            <div class="radio-group">
+                <label><input type="radio" name="setup-char-select" value="pikachu" checked> <span class="radio-label">皮卡丘</span></label>
+                <label><input type="radio" name="setup-char-select" value="superman"> <span class="radio-label">超人</span></label>
+                <label><input type="radio" name="setup-char-select" value="supergirl"> <span class="radio-label">女超人</span></label>
+                <label><input type="radio" name="setup-char-select" value="ironman"> <span class="radio-label">鋼鐵人</span></label>
+                <label><input type="radio" name="setup-char-select" value="blackwidow"> <span class="radio-label">黑寡婦</span></label>
+                <label><input type="radio" name="setup-char-select" value="pokeball"> <span class="radio-label">寶可球</span></label>
+                <label><input type="radio" name="setup-char-select" value="princess"> <span class="radio-label">公主</span></label>
+                <label><input type="radio" name="setup-char-select" value="mario"> <span class="radio-label">瑪利歐</span></label>
+            </div>
+        </div>
+
+        <!-- Difficulty Selection -->
+        <div class="selector-group">
+            <span class="selector-label">挑戰難度</span>
+            <div class="radio-group">
+                <label><input type="radio" name="setup-diff-select" value="easy"> <span class="radio-label">簡單 (10分)</span></label>
+                <label><input type="radio" name="setup-diff-select" value="medium" checked> <span class="radio-label">普通 (20分)</span></label>
+                <label><input type="radio" name="setup-diff-select" value="hard"> <span class="radio-label">困難 (30分)</span></label>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" style="font-size: 1.5rem; padding: 15px 60px; margin-top: 20px;" onclick="Game.startFromSetup()">GO! 開始</button>
     </div>
 
     <!-- Teacher Panel -->
@@ -407,7 +478,7 @@
     <div id="game-over-screen" class="ui-screen hidden">
         <h1>遊戲結束</h1>
         <h2 id="final-score">得分: 0</h2>
-        <button class="btn btn-primary" onclick="Game.start()">再玩一次</button>
+        <button class="btn btn-primary" onclick="Game.restart()">再玩一次</button>
         <button class="btn btn-secondary" onclick="Game.showMenu()">回主選單</button>
     </div>
 </div>
@@ -500,6 +571,12 @@ const CONFUSING_DB = {
 
 const COMMON_CHARS = "的一是在不了有和人這中大為上個國我向要他時來用們生到作地於出就分對成會可主發年動同工也能下過子說產種面而方後多定行學法所民得經十三之進著等部度家更完樣今育提求治以流現五內聖";
 
+const DIFFICULTY_SETTINGS = {
+    'easy': { speedMod: 0.7, score: 10, spawnMod: 1.2 },
+    'medium': { speedMod: 1.0, score: 20, spawnMod: 1.0 },
+    'hard': { speedMod: 1.5, score: 30, spawnMod: 0.8 }
+};
+
 const Game = {
     canvas: document.getElementById('gameCanvas'),
     ctx: null,
@@ -509,10 +586,12 @@ const Game = {
     paused: false,
     score: 0,
     
-    // Timer
+    // Config
     gameDuration: 60,
     remainingTime: 60,
     lastTime: 0,
+    currentDifficulty: 'medium',
+    currentCharacter: 'pikachu',
 
     // Level System
     targetList: ['愛', '我', '人'],
@@ -551,7 +630,6 @@ const Game = {
         });
         window.addEventListener('keyup', (e) => this.keys[e.key] = false);
         
-        // Unlock audio context on first touch
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.playSound('silent');
@@ -571,8 +649,9 @@ const Game = {
         
         this.updateDistractorsPreview();
         
+        // Based on URL, go to Setup Screen with specific mode
         if (isShared) {
-            this.showStudentScreen();
+            this.showSetupScreen(true);
         } else {
             this.showMenu();
         }
@@ -606,7 +685,6 @@ const Game = {
             }
         }
         
-        // Sync UI
         document.getElementById('target-input').value = this.targetList.join('');
         document.getElementById('time-input').value = this.gameDuration;
         
@@ -653,9 +731,12 @@ const Game = {
         this.toggleUIScreens('start-screen');
     },
     
-    showStudentScreen() {
+    showSetupScreen(isStudent) {
         this.state = 'start';
-        this.toggleUIScreens('student-screen');
+        this.toggleUIScreens('setup-screen');
+        // Show/Hide Teacher Message
+        const msg = document.getElementById('teacher-msg');
+        msg.style.display = isStudent ? 'block' : 'none';
     },
 
     showTeacherPanel() {
@@ -666,7 +747,7 @@ const Game = {
     },
     
     toggleUIScreens(activeId) {
-        const screens = ['start-screen', 'student-screen', 'teacher-screen', 'game-over-screen'];
+        const screens = ['start-screen', 'setup-screen', 'teacher-screen', 'game-over-screen'];
         screens.forEach(id => {
             const el = document.getElementById(id);
             if (id === activeId) el.classList.remove('hidden');
@@ -726,7 +807,8 @@ const Game = {
             const cleanInput = input.replace(/\s/g, '');
             this.targetList = cleanInput.split('');
             this.gameDuration = timeInput;
-            this.start();
+            // Instead of starting game directly, go to setup screen so teacher can test choices
+            this.showSetupScreen(false);
         } else {
             alert("請輸入有效的文字與時間");
         }
@@ -741,10 +823,9 @@ const Game = {
         this.announceTarget(char);
     },
     
-    // Unlock speech synthesis on mobile
     unlockSpeech() {
         if (!this.speechUnlocked && 'speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(''); // Blank sound
+            const utterance = new SpeechSynthesisUtterance(''); 
             window.speechSynthesis.speak(utterance);
             this.speechUnlocked = true;
         }
@@ -775,32 +856,52 @@ const Game = {
         
         if (this.paused) {
             pauseBtn.innerText = "▶";
-            pauseBtn.style.background = "#2ecc71"; // Green for play
+            pauseBtn.style.background = "#2ecc71"; 
             pauseOverlay.classList.remove('hidden');
         } else {
             pauseBtn.innerText = "||";
-            pauseBtn.style.background = "#e74c3c"; // Red for pause
+            pauseBtn.style.background = "#e74c3c"; 
             pauseOverlay.classList.add('hidden');
-            // Resume speech unlock if needed
             this.unlockSpeech();
         }
     },
 
-    start() {
-        // Unlock speech on user interaction (Clicking Start)
+    getSelectedOptions() {
+        const diffRadios = document.getElementsByName('setup-diff-select');
+        for (const r of diffRadios) {
+            if (r.checked) this.currentDifficulty = r.value;
+        }
+        
+        const charRadios = document.getElementsByName('setup-char-select');
+        for (const r of charRadios) {
+            if (r.checked) this.currentCharacter = r.value;
+        }
+    },
+    
+    startFromSetup() {
+        this.getSelectedOptions();
+        this._startGameLogic();
+    },
+    
+    restart() {
+        this._startGameLogic();
+    },
+
+    _startGameLogic() {
         this.unlockSpeech();
-        this.playSound('silent'); // Unlock audio
+        this.playSound('silent'); 
         
         this.score = 0;
         this.frame = 0;
-        this.gameSpeed = 3; 
+        const settings = DIFFICULTY_SETTINGS[this.currentDifficulty];
+        this.gameSpeed = 2 * settings.speedMod;
+        
         this.remainingTime = this.gameDuration;
         this.enemies = [];
         this.particles = [];
         this.paused = false;
         this.player.shockTimer = 0;
         
-        // Reset Pause UI
         document.getElementById('pause-btn').innerText = "||";
         document.getElementById('pause-btn').style.background = "#e74c3c";
         document.getElementById('pause-overlay').classList.add('hidden');
@@ -855,7 +956,7 @@ const Game = {
     },
 
     spawnEnemy() {
-        const x = Math.random() * (this.width - 50);
+        const x = Math.random() * (this.width - 60);
         const isCorrect = Math.random() > 0.6; 
         
         let char = this.targetChar;
@@ -865,9 +966,9 @@ const Game = {
 
         this.enemies.push({
             x: x,
-            y: -50,
-            width: 50, 
-            height: 50,
+            y: -60,
+            width: 60, 
+            height: 60,
             char: char,
             isCorrect: isCorrect,
             speed: Math.random() * 2 + this.gameSpeed
@@ -888,7 +989,7 @@ const Game = {
     },
     
     triggerShock() {
-        this.player.shockTimer = 30; // 30 frames of shock
+        this.player.shockTimer = 30; 
     },
 
     checkCollision(rect1, rect2) {
@@ -911,7 +1012,7 @@ const Game = {
 
     update(timestamp) {
         if (this.state !== 'playing' || this.paused) {
-            this.lastTime = timestamp; // Prevent time jump
+            this.lastTime = timestamp; 
             return;
         }
 
@@ -928,14 +1029,17 @@ const Game = {
 
         this.frame++;
         
-        // Update Shock Timer
         if (this.player.shockTimer > 0) this.player.shockTimer--;
 
         if (this.frame % 600 === 0) {
             this.gameSpeed += 0.2;
         }
 
-        if (this.frame % Math.floor(60 / (this.gameSpeed * 0.4)) === 0) {
+        // Spawn rate based on difficulty
+        const settings = DIFFICULTY_SETTINGS[this.currentDifficulty];
+        const spawnRate = Math.floor(60 * settings.spawnMod / (this.gameSpeed * 0.4));
+        
+        if (this.frame % spawnRate === 0) {
             this.spawnEnemy();
         }
 
@@ -962,7 +1066,8 @@ const Game = {
                 this.enemies.splice(i, 1);
                 
                 if (e.isCorrect) {
-                    this.score += 10;
+                    const pts = DIFFICULTY_SETTINGS[this.currentDifficulty].score;
+                    this.score += pts;
                     this.levelProgress++;
                     this.createParticles(e.x + e.width/2, e.y + e.height/2, '#f1c40f');
                     this.playSound('catch_good');
@@ -978,7 +1083,7 @@ const Game = {
                     this.score -= 5;
                     this.createParticles(e.x + e.width/2, e.y + e.height/2, '#e74c3c');
                     this.playSound('catch_bad');
-                    this.triggerShock(); // Trigger shock animation
+                    this.triggerShock(); 
                 }
                 document.getElementById('score-board').innerText = "分數: " + this.score;
                 
@@ -1004,70 +1109,79 @@ const Game = {
         }
     },
     
-    // Draw Pixel Pikachu
-    drawPixelPikachu(x, y, w, h) {
-        // Simple Pixel Grid (1 = Yellow, 2 = Black, 3 = Red, 4 = Brown, 5 = White)
+    // Universal Character Renderer
+    drawCharacter(x, y, w, h) {
+        const ctx = this.ctx;
         const px = w / 16;
-        const py = h / 16;
+        const type = this.currentCharacter;
         
-        // Draw Ears (Left/Right)
-        this.ctx.fillStyle = '#000'; // Black tips
-        this.ctx.fillRect(x + 1*px, y + 0*px, 2*px, 2*px);
-        this.ctx.fillRect(x + 13*px, y + 0*px, 2*px, 2*px);
+        const f = (c, dx, dy, dw, dh) => { ctx.fillStyle = c; ctx.fillRect(x + dx*px, y + dy*px, dw*px, dh*px); };
         
-        this.ctx.fillStyle = '#F1C40F'; // Yellow Body/Ears
-        this.ctx.fillRect(x + 2*px, y + 2*px, 2*px, 3*px); // L Ear
-        this.ctx.fillRect(x + 12*px, y + 2*px, 2*px, 3*px); // R Ear
-        
-        // Head Main
-        this.ctx.fillRect(x + 3*px, y + 4*px, 10*px, 8*px);
-        this.ctx.fillRect(x + 2*px, y + 6*px, 12*px, 5*px); // Widen face
-        
-        // Eyes
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(x + 4*px, y + 6*px, 2*px, 2*px);
-        this.ctx.fillRect(x + 10*px, y + 6*px, 2*px, 2*px);
-        // Eye Sparkle
-        this.ctx.fillStyle = '#FFF';
-        this.ctx.fillRect(x + 5*px, y + 6.2*px, 0.5*px, 0.5*px);
-        this.ctx.fillRect(x + 11*px, y + 6.2*px, 0.5*px, 0.5*px);
-        
-        // Cheeks (Red)
-        this.ctx.fillStyle = '#E74C3C';
-        this.ctx.fillRect(x + 2*px, y + 8*px, 2*px, 2*px);
-        this.ctx.fillRect(x + 12*px, y + 8*px, 2*px, 2*px);
-        
-        // Nose
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(x + 7.5*px, y + 8.5*px, 1*px, 0.5*px);
-        
-        // Mouth
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 2;
-        this.ctx.moveTo(x + 7*px, y + 9.5*px);
-        this.ctx.lineTo(x + 8*px, y + 10*px);
-        this.ctx.lineTo(x + 9*px, y + 9.5*px);
-        this.ctx.stroke();
-        
-        // Body
-        this.ctx.fillStyle = '#F1C40F';
-        this.ctx.fillRect(x + 4*px, y + 11*px, 8*px, 5*px);
-        
-        // Tail
-        this.ctx.fillStyle = '#8B4513'; // Brown base
-        this.ctx.fillRect(x + 4*px, y + 12*px, 2*px, 1*px);
-        this.ctx.fillStyle = '#F1C40F'; // Yellow lightning
-        this.ctx.fillRect(x + 1*px, y + 7*px, 2*px, 1*px);
-        this.ctx.fillRect(x + 2*px, y + 8*px, 1*px, 2*px);
-        this.ctx.fillRect(x + 3*px, y + 10*px, 1*px, 2*px);
-        
+        if (type === 'pikachu') {
+            f('#000', 1, 0, 2, 2); f('#000', 13, 0, 2, 2);
+            f('#F1C40F', 2, 2, 2, 3); f('#F1C40F', 12, 2, 2, 3);
+            f('#F1C40F', 3, 4, 10, 8); f('#F1C40F', 2, 6, 12, 5);
+            f('#000', 4, 6, 2, 2); f('#000', 10, 6, 2, 2);
+            f('#FFF', 5, 6.2, 0.5, 0.5); f('#FFF', 11, 6.2, 0.5, 0.5);
+            f('#E74C3C', 2, 8, 2, 2); f('#E74C3C', 12, 8, 2, 2);
+            f('#F1C40F', 4, 11, 8, 5);
+            f('#8B4513', 4, 12, 2, 1); f('#F1C40F', 1, 7, 2, 1); f('#F1C40F', 2, 8, 1, 2);
+        } 
+        else if (type === 'superman') {
+            f('#000', 4, 2, 8, 3); f('#000', 7, 3, 1, 2); 
+            f('#FFCC99', 4, 5, 8, 5);
+            f('#000', 5, 6, 1, 1); f('#000', 10, 6, 1, 1);
+            f('#3498db', 4, 10, 8, 6);
+            f('#f1c40f', 7, 11, 2, 2); f('#e74c3c', 7.5, 11.5, 1, 1);
+            f('#c0392b', 2, 11, 2, 5); f('#c0392b', 12, 11, 2, 5);
+        }
+        else if (type === 'supergirl') {
+            f('#f1c40f', 3, 2, 10, 8); 
+            f('#FFCC99', 5, 5, 6, 4);
+            f('#000', 6, 6, 1, 1); f('#000', 9, 6, 1, 1);
+            f('#3498db', 5, 10, 6, 3);
+            f('#c0392b', 4, 13, 8, 3);
+            f('#c0392b', 3, 11, 2, 4); f('#c0392b', 11, 11, 2, 4);
+        }
+        else if (type === 'ironman') {
+            f('#c0392b', 4, 3, 8, 7); 
+            f('#f1c40f', 5, 4, 6, 5); 
+            f('#fff', 5.5, 5.5, 1.5, 0.5); f('#fff', 9, 5.5, 1.5, 0.5);
+            f('#c0392b', 3, 10, 10, 6);
+            f('#3498db', 7, 11, 2, 2); f('#fff', 7.5, 11.5, 1, 1);
+        }
+        else if (type === 'blackwidow') {
+            f('#d35400', 4, 3, 8, 7); f('#d35400', 2, 5, 3, 5); f('#d35400', 11, 5, 3, 5);
+            f('#FFCC99', 5, 5, 6, 4);
+            f('#2c3e50', 5, 10, 6, 6);
+            f('#c0392b', 7, 12, 2, 1);
+        }
+        else if (type === 'pokeball') {
+            f('#c0392b', 3, 3, 10, 5);
+            f('#ecf0f1', 3, 8, 10, 5);
+            f('#2c3e50', 3, 7.5, 10, 1);
+            f('#ecf0f1', 7, 7, 2, 2); f('#2c3e50', 7.5, 7.5, 1, 1);
+        }
+        else if (type === 'princess') {
+            f('#f1c40f', 5, 2, 6, 2);
+            f('#8e44ad', 4, 4, 8, 6);
+            f('#FFCC99', 5, 5, 6, 4);
+            f('#e056fd', 4, 10, 8, 6); f('#e056fd', 2, 12, 12, 4);
+        }
+        else if (type === 'mario') {
+            f('#c0392b', 3, 3, 10, 2); f('#c0392b', 3, 3, 6, 3);
+            f('#FFCC99', 4, 5, 7, 4);
+            f('#000', 6, 7, 4, 1); f('#000', 6, 7, 1, 0.5);
+            f('#c0392b', 4, 9, 8, 2); 
+            f('#3498db', 5, 11, 6, 5);
+            f('#f1c40f', 5, 12, 1, 1); f('#f1c40f', 10, 12, 1, 1);
+        }
+
         // Shock Effect Overlay
         if (this.player.shockTimer > 0) {
             this.ctx.strokeStyle = (Math.floor(this.frame / 2) % 2 === 0) ? '#FFFF00' : '#87CEEB';
             this.ctx.lineWidth = 3;
             this.ctx.beginPath();
-            // Jagged lines
             for (let i = 0; i < 8; i++) {
                 let angle = (i / 8) * Math.PI * 2;
                 let r = w/1.5 + Math.random() * 10;
@@ -1086,37 +1200,33 @@ const Game = {
 
         if (this.state !== 'playing') return;
 
-        // Draw Player (Pixel Art)
-        this.drawPixelPikachu(this.player.x, this.player.y, this.player.width, this.player.height);
+        // Draw Player using the new function
+        this.drawCharacter(this.player.x, this.player.y, this.player.width, this.player.height);
 
         // Enemies (Falling bubbles)
         this.enemies.forEach(e => {
-            // Shadow
             this.ctx.fillStyle = 'rgba(0,0,0,0.1)';
             this.ctx.beginPath();
             this.ctx.arc(e.x + e.width/2 + 3, e.y + e.height/2 + 3, e.width/2, 0, Math.PI*2);
             this.ctx.fill();
 
-            // Bubble
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
             this.ctx.beginPath();
             this.ctx.arc(e.x + e.width/2, e.y + e.height/2, e.width/2, 0, Math.PI*2);
             this.ctx.fill();
             
-            // Border
             this.ctx.strokeStyle = '#3498db';
-            this.ctx.lineWidth = 2;
+            this.ctx.lineWidth = 3; 
             this.ctx.stroke();
 
-            // Text - 優先使用 Web Font (Klee One)，然後是內建楷體
+            // Bigger Font (50px)
             this.ctx.fillStyle = '#2c3e50';
-            this.ctx.font = 'bold 28px "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif';
+            this.ctx.font = 'bold 50px "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(e.char, e.x + e.width/2, e.y + e.height/2);
+            this.ctx.fillText(e.char, e.x + e.width/2, e.y + e.height/2 + 2); 
         });
 
-        // Particles
         this.particles.forEach(p => {
             this.ctx.fillStyle = p.color;
             this.ctx.fillRect(p.x, p.y, 5, 5);
@@ -1146,12 +1256,11 @@ const Game = {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(500, now);
             osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
-            gain.gain.setValueAtTime(0.05, now); // 降低音效音量 (原為 0.1)，突顯人聲讀音
+            gain.gain.setValueAtTime(0.05, now); 
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
             osc.start(now);
             osc.stop(now + 0.2);
         } else if (type === 'catch_bad') {
-            // Electric buzz sound
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(100, now);
             osc.frequency.linearRampToValueAtTime(50, now + 0.3);
