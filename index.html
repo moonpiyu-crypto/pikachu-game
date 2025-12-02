@@ -3,1292 +3,1002 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>皮卡丘文字接接樂</title>
-    <!-- 引入 Google Fonts: Klee One (教科書體/楷體風格) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <title>大金剛語詞大冒險</title>
+    <!-- 引入 Tailwind CSS 進行快速排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 QR Code 生成庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
+        /* 強制設定標楷體 */
+        @font-face {
+            font-family: 'BiauKaiStandard';
+            src: local("BiauKai"), local("DFKai-SB"), local("標楷體");
+        }
+
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #2c3e50;
-            font-family: "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif;
+            font-family: "BiauKaiStandard", "BiauKai", "DFKai-SB", "標楷體", serif;
+            touch-action: none; /* 防止手機滑動時觸發捲動 */
+            background-color: #000;
             overflow: hidden;
-            touch-action: none;
-            color: white;
             user-select: none;
         }
 
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(to bottom, #74ebd5, #ACB6E5);
+        .pixel-font {
+            font-family: "Courier New", Courier, monospace; /* 輔助用像素感字體 */
         }
 
-        canvas {
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-            background: rgba(255, 255, 255, 0.1);
-            max-width: 100%;
-            max-height: 100%;
-            image-rendering: pixelated; 
+        /* 遊戲畫布 */
+        #gameCanvas {
+            image-rendering: pixelated; /* 讓像素繪圖更清晰 */
+            width: 100%;
+            height: 100%;
         }
 
-        /* UI Overlay Styles */
-        .ui-screen {
+        /* UI 層 */
+        .ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            pointer-events: none;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        /* 互動控制層 (按鈕等) */
+        .interactive-layer {
+            pointer-events: auto;
+        }
+
+        /* 模態視窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
             justify-content: center;
             align-items: center;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10;
-            transition: opacity 0.3s;
-            font-family: inherit; 
+            z-index: 50;
+            flex-direction: column;
+            overflow-y: auto;
         }
 
         .hidden {
             display: none !important;
         }
 
-        h1 {
-            font-size: 3rem;
-            color: #f1c40f;
-            text-shadow: 4px 4px #c0392b;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: bold;
-            font-family: inherit;
+        /* 閃爍效果 */
+        .flash {
+            animation: flashAnimation 0.5s infinite;
+        }
+        @keyframes flashAnimation {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
-        .btn {
-            padding: 15px 40px;
-            font-size: 1.3rem;
-            margin: 15px;
-            border: 4px solid rgba(0,0,0,0.2);
-            border-radius: 15px;
-            cursor: pointer;
-            transition: transform 0.1s;
-            font-weight: bold;
-            font-family: inherit;
+        .dk-border {
+            border: 4px solid #d32f2f;
+            box-shadow: 0 0 0 4px #000, 0 0 0 8px #d32f2f;
         }
 
-        .btn-primary {
-            background-color: #f1c40f;
-            color: #2c3e50;
+        /* 虛擬搖桿與按鈕 (手機版) */
+        #mobileControls {
+            display: none; /* 預設隱藏，JS 偵測到觸控時顯示 */
         }
-
-        .btn-primary:active {
-            transform: scale(0.95);
+        @media (hover: none) and (pointer: coarse) {
+            #mobileControls {
+                display: flex;
+            }
         }
-
-        .btn-secondary {
-            background-color: #3498db;
+        
+        .d-pad-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
             color: white;
-        }
-        
-        .btn-green {
-            background-color: #2ecc71;
-            color: white;
-        }
-
-        /* Selector Styles */
-        .selector-group {
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 15px;
-            margin: 10px 0;
-            text-align: center;
-            width: 90%;
-            max-width: 700px;
-        }
-        
-        .selector-label {
-            font-size: 1.3rem;
-            color: #f1c40f;
-            margin-bottom: 10px;
-            display: block;
-            font-weight: bold;
-        }
-        
-        .radio-group {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        
-        .radio-label {
-            background: #ecf0f1;
-            color: #2c3e50;
-            padding: 10px 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.2s;
-            font-size: 1.1rem;
-        }
-        
-        input[type="radio"] {
-            display: none;
-        }
-        
-        input[type="radio"]:checked + .radio-label {
-            background: #f1c40f;
-            color: #c0392b;
-            border-color: #c0392b;
-            transform: scale(1.1);
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        /* Pause Button */
-        #pause-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px; 
-            width: 50px;
-            height: 50px;
-            background: #e74c3c;
-            border: 3px solid white;
-            border-radius: 50%;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 24px;
             display: flex;
             justify-content: center;
             align-items: center;
-            cursor: pointer;
-            z-index: 20;
-            pointer-events: auto;
-            box-shadow: 0 4px 0 #c0392b;
-            font-family: Arial, sans-serif;
+            user-select: none;
         }
-        
-        #pause-btn:active {
-            transform: translateY(4px);
-            box-shadow: none;
-        }
-
-        .panel {
-            background: white;
-            color: #333;
-            padding: 20px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            text-align: center;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        textarea {
-            padding: 10px;
-            font-size: 1.2rem;
-            width: 90%;
-            height: 60px;
-            text-align: left;
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            resize: none;
-            font-family: inherit;
-        }
-
-        input[type="number"] {
-            padding: 5px;
-            font-size: 1.2rem;
-            width: 80px;
-            text-align: center;
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            font-family: inherit;
-        }
-        
-        #share-link-box {
-            width: 90%;
-            font-size: 0.8rem;
-            padding: 5px;
-            margin-top: 5px;
-            color: #555;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            word-break: break-all;
-            font-family: sans-serif;
-        }
-
-        #share-section {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 2px dashed #eee;
-            display: none; 
-        }
-        
-        #qr-code-img {
-            margin: 10px auto;
-            border: 5px solid white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            max-width: 150px;
-            display: block;
-        }
-
-        #game-ui {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
-            font-family: inherit;
-        }
-
-        #score-board {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 1.5rem;
-            color: #2c3e50;
-            font-weight: bold;
-            text-shadow: 1px 1px 0px white;
-        }
-
-        #timer-board {
-            position: absolute;
-            top: 45px;
-            left: 10px;
-            font-size: 1.2rem;
-            color: #e74c3c;
-            font-weight: bold;
-            text-shadow: 1px 1px 0px white;
-        }
-
-        #target-display {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.2rem;
-            color: #333;
-            background: rgba(255,255,255,0.9);
-            padding: 5px 20px;
-            border-radius: 20px;
-            border: 3px solid #f1c40f;
-            pointer-events: auto;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
-            text-align: center;
-            font-family: inherit;
-        }
-
-        #level-progress {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 2px;
-        }
-
-        #toast-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(46, 204, 113, 0.95);
-            color: white;
-            padding: 30px 50px;
-            border-radius: 50px;
-            font-size: 2.5rem;
-            font-weight: bold;
-            z-index: 100;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            white-space: nowrap;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            font-family: inherit;
-        }
-        
-        .toast-visible {
-            opacity: 1 !important;
-            animation: bounce 0.5s ease-out;
-        }
-
-        @keyframes bounce {
-            0% { transform: translate(-50%, -50%) scale(0.5); }
-            50% { transform: translate(-50%, -50%) scale(1.1); }
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-
-        .mobile-hint {
-            margin-top: 20px;
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-
-        .distractor-preview {
-            display: flex;
-            gap: 5px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-        .distractor-tag {
-            background: #eee;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            margin: 2px;
-            font-family: inherit;
-        }
-        
-        .target-tag {
-            background: #f1c40f;
-            color: #2c3e50;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            margin: 2px;
-            font-family: inherit;
-        }
-        
-        #pause-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 15;
-            color: white;
-            font-size: 3rem;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px black;
-            pointer-events: none;
-            font-family: "BiauKai", "標楷體", "DFKai-SB", serif;
+        .d-pad-btn:active {
+            background: rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
-<body>
+<body class="text-white">
 
-<div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="game-ui">
-        <div id="score-board">分數: 0</div>
-        <div id="timer-board">時間: 60</div>
-        <div id="target-display">
-            接住: <span id="current-target-char" style="color:#e74c3c; font-size:1.5em; font-weight:bold;">?</span>
-            <div id="level-progress">進度: 0/5</div>
-        </div>
-        <div id="pause-btn" onclick="Game.togglePause()">||</div>
-        <div id="pause-overlay" class="hidden">暫停中</div>
-        <div id="toast-message">下一關！</div>
-    </div>
-
-    <!-- Main Menu (Cleaned up) -->
-    <div id="start-screen" class="ui-screen">
-        <h1>皮卡丘<br>文字接接樂</h1>
-        
-        <button class="btn btn-primary" onclick="Game.showTeacherPanel()">我是老師 (設定題目)</button>
-        <button class="btn btn-secondary" onclick="Game.showSetupScreen(false)">開始遊戲</button>
-        
-        <div class="mobile-hint">電腦：使用左右方向鍵 / 手機：按住螢幕滑動</div>
-    </div>
-
-    <!-- Game Setup Screen (For both Student & Solo) -->
-    <div id="setup-screen" class="ui-screen hidden">
-        <h1>準備開始</h1>
-        <!-- Teacher Message (Hidden by default) -->
-        <div id="teacher-msg" style="display:none; font-size: 1.2rem; color: #f1c40f; margin-bottom: 10px;">
-            ★ 老師已經設定好題目囉！
-        </div>
-        
-        <!-- Character Selection -->
-        <div class="selector-group">
-            <span class="selector-label">選擇你的角色</span>
-            <div class="radio-group">
-                <label><input type="radio" name="setup-char-select" value="pikachu" checked> <span class="radio-label">皮卡丘</span></label>
-                <label><input type="radio" name="setup-char-select" value="superman"> <span class="radio-label">超人</span></label>
-                <label><input type="radio" name="setup-char-select" value="supergirl"> <span class="radio-label">女超人</span></label>
-                <label><input type="radio" name="setup-char-select" value="ironman"> <span class="radio-label">鋼鐵人</span></label>
-                <label><input type="radio" name="setup-char-select" value="blackwidow"> <span class="radio-label">黑寡婦</span></label>
-                <label><input type="radio" name="setup-char-select" value="pokeball"> <span class="radio-label">寶可球</span></label>
-                <label><input type="radio" name="setup-char-select" value="princess"> <span class="radio-label">公主</span></label>
-                <label><input type="radio" name="setup-char-select" value="mario"> <span class="radio-label">瑪利歐</span></label>
-            </div>
-        </div>
-
-        <!-- Difficulty Selection -->
-        <div class="selector-group">
-            <span class="selector-label">挑戰難度</span>
-            <div class="radio-group">
-                <label><input type="radio" name="setup-diff-select" value="easy"> <span class="radio-label">簡單 (10分)</span></label>
-                <label><input type="radio" name="setup-diff-select" value="medium" checked> <span class="radio-label">普通 (20分)</span></label>
-                <label><input type="radio" name="setup-diff-select" value="hard"> <span class="radio-label">困難 (30分)</span></label>
-            </div>
-        </div>
-
-        <button class="btn btn-primary" style="font-size: 1.5rem; padding: 15px 60px; margin-top: 20px;" onclick="Game.startFromSetup()">GO! 開始</button>
-    </div>
-
-    <!-- Teacher Panel -->
-    <div id="teacher-screen" class="ui-screen hidden">
-        <div class="panel">
-            <h2>題目與設定</h2>
+    <!-- ==================== 1. 教師設定面板 ==================== -->
+    <div id="teacherPanel" class="modal">
+        <div class="bg-gray-900 p-6 rounded-lg max-w-2xl w-full m-4 border-4 border-blue-500 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h1 class="text-3xl font-bold mb-4 text-center text-yellow-400">🦍 大金剛語詞大冒險 (平台跳躍版)</h1>
             
-            <div style="margin-bottom: 15px; text-align: left; padding: 0 10px;">
-                <label for="time-input">遊戲時間 (秒)：</label>
-                <input type="number" id="time-input" value="60" min="10" max="300">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block mb-2 text-lg text-blue-300">1. 輸入正確語詞 (換行或逗號分隔)</label>
+                    <textarea id="inputWords" class="w-full h-40 p-3 bg-gray-800 text-white border border-gray-600 rounded text-xl font-bold" placeholder="例如：
+蘋果
+香蕉
+葡萄"></textarea>
+                    <p class="text-sm text-gray-400 mt-1">* 系統將自動尋找相似字作為干擾</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-lg text-blue-300">2. 遊戲時間 (秒)</label>
+                        <input type="number" id="inputTime" value="120" class="w-full p-2 bg-gray-800 border border-gray-600 rounded text-center text-2xl">
+                    </div>
+                    
+                    <div class="bg-gray-800 p-3 rounded border border-gray-700">
+                        <h3 class="text-blue-300 mb-2">預覽模擬 AI 選字:</h3>
+                        <div id="aiPreview" class="text-sm text-gray-300 min-h-[50px]">
+                            (輸入文字後顯示預覽...)
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">請輸入要練習的文字 (可一次輸入多個字)。</p>
-            <textarea id="target-input" placeholder="例如：愛我人日月星" oninput="Game.updateDistractorsPreview()">愛我人</textarea>
-            
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">AI 將自動為每個字尋找相似/易混淆字。</p>
-            
-            <div id="distractor-container" class="distractor-preview">
-                <!-- Preview generated chars here -->
-            </div>
+            <button onclick="generateGameLink()" class="w-full mt-6 bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded text-xl shadow-lg transform transition active:scale-95">
+                產生分享連結 / QR Code
+            </button>
 
-            <button class="btn btn-primary" onclick="Game.saveSettings()">直接開始</button>
-            <button class="btn btn-green" onclick="Game.generateShareLink()">產生分享 QR Code</button>
-            
-            <div id="share-section">
-                <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">讓學生掃描此 QR Code，<br>即可直接進入遊戲！</p>
-                <img id="qr-code-img" alt="QR Code" src="">
-                <input type="text" id="share-link-box" readonly onclick="this.select()">
+            <div id="shareSection" class="hidden mt-6 flex flex-col items-center bg-white p-4 rounded-lg">
+                <div id="qrcode" class="mb-4"></div>
+                <p class="text-black font-bold mb-2">掃描上方 QR Code 或複製連結：</p>
+                <input type="text" id="shareLink" class="w-full p-2 border rounded text-black mb-2" readonly>
+                <button onclick="copyLink()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">複製連結</button>
+                <button onclick="enterStudentMode()" class="mt-2 text-blue-800 underline">直接在此裝置開始遊戲</button>
             </div>
-            
-            <button class="btn btn-secondary" style="margin-top:10px; font-size:1rem; padding:10px 20px;" onclick="Game.showMenu()">返回主選單</button>
         </div>
     </div>
 
-    <!-- Game Over Screen -->
-    <div id="game-over-screen" class="ui-screen hidden">
-        <h1>遊戲結束</h1>
-        <h2 id="final-score">得分: 0</h2>
-        <button class="btn btn-primary" onclick="Game.restart()">再玩一次</button>
-        <button class="btn btn-secondary" onclick="Game.showMenu()">回主選單</button>
+    <!-- ==================== 2. 學生：角色與難度選擇 ==================== -->
+    <div id="studentMenu" class="modal hidden">
+        <div class="bg-gray-900 p-6 rounded-lg max-w-4xl w-full m-2 border-4 border-red-500 text-center">
+            <h2 class="text-4xl font-bold mb-6 text-yellow-400 pixel-font">SELECT YOUR HERO</h2>
+            
+            <!-- 角色選擇 -->
+            <div class="flex flex-wrap justify-center gap-4 mb-8">
+                <div id="characterSelectContainer" class="flex flex-wrap justify-center gap-4"></div>
+            </div>
+
+            <!-- 難度選擇 -->
+            <h3 class="text-2xl font-bold mb-4 text-white">選擇難度</h3>
+            <div class="flex justify-center gap-4 mb-8">
+                <button onclick="selectDifficulty('easy')" class="difficulty-btn px-6 py-3 bg-green-600 rounded-lg hover:bg-green-500 text-xl font-bold border-b-4 border-green-800 active:border-b-0 active:translate-y-1">
+                    簡單 (慢/10分)
+                </button>
+                <button onclick="selectDifficulty('medium')" class="difficulty-btn px-6 py-3 bg-yellow-600 rounded-lg hover:bg-yellow-500 text-xl font-bold border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1 ring-4 ring-white">
+                    普通 (中/20分)
+                </button>
+                <button onclick="selectDifficulty('hard')" class="difficulty-btn px-6 py-3 bg-red-600 rounded-lg hover:bg-red-500 text-xl font-bold border-b-4 border-red-800 active:border-b-0 active:translate-y-1">
+                    困難 (快/30分)
+                </button>
+            </div>
+
+            <button id="startBtn" onclick="startGame()" class="w-full max-w-md bg-blue-600 hover:bg-blue-500 text-white text-3xl font-bold py-4 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] animate-bounce">
+                開始遊戲 (START)
+            </button>
+        </div>
     </div>
-</div>
 
-<script>
-/**
- * 終極版「易混淆字」資料庫
- */
-const CONFUSING_DB = {
-    '人': ['入', '八', '乂', '大', '个', '久'],
-    '入': ['人', '八', '乂'],
-    '大': ['太', '犬', '夫', '天', '人', '夭', '夲'],
-    '太': ['大', '犬', '夫', '天', '夭'],
-    '天': ['夫', '大', '太', '夭', '未', '末', '无'],
-    '夫': ['天', '大', '太', '夭', '未', '末'],
-    '土': ['士', '工', '上', '止', '干', '王'],
-    '士': ['土', '工', '上', '壬', '王', '干'],
-    '工': ['土', '士', '王', '干', '上'],
-    '王': ['玉', '主', '土', '干', '五', '壬', '玊'],
-    '玉': ['王', '主', '宝', '玊'],
-    '主': ['王', '玉', '注', '住'],
-    '田': ['由', '甲', '申', '旦', '日', '目', '电'],
-    '由': ['田', '甲', '申', '曲'],
-    '甲': ['田', '由', '申'],
-    '申': ['田', '由', '甲', '伸'],
-    '日': ['曰', '目', '田', '白', '旦', '口'],
-    '曰': ['日', '目', '白', '旦'],
-    '目': ['日', '且', '自', '白', '貝'],
-    '白': ['自', '百', '日', '臼', '伯', '的', '向'],
-    '自': ['白', '目', '百', '首'],
-    '木': ['本', '禾', '术', '林', '未', '末', '米'],
-    '本': ['木', '禾', '术', '体', '来'],
-    '禾': ['木', '本', '季', '米'],
-    '未': ['末', '木', '禾', '朱', '来'],
-    '末': ['未', '木', '禾', '朱', '耒'],
-    '我': ['找', '錢', '淺', '俄', '娥', '戔', '伐'],
-    '找': ['我', '划', '戏', '伐', '栈', '把'],
-    '愛': ['受', '暖', '憂', '慶', '曼', '爰'],
-    '受': ['愛', '爱', '叟'],
-    '右': ['石', '左', '古', '若', '友', '佑'],
-    '左': ['右', '在', '友', '存', '工', '佐'],
-    '石': ['右', '古', '若', '宕'],
-    '友': ['反', '支', '皮', '又', '左', '右'],
-    '候': ['侯', '猴', '喉', '條'],
-    '侯': ['候', '猴', '喉'],
-    '辨': ['瓣', '辯', '辮', '辦', '班'],
-    '瓣': ['辨', '辯', '辮', '辦'],
-    '辯': ['辨', '瓣', '辮', '辦'],
-    '己': ['已', '巳', '乙', '弓'],
-    '已': ['己', '巳', '乙'],
-    '巳': ['己', '已', '巴'],
-    '很': ['根', '銀', '狠', '恨', '限', '眼'],
-    '根': ['很', '銀', '狠', '恨', '跟'],
-    '瓜': ['爪', '爬', '抓', '孤'],
-    '爪': ['瓜', '爬', '抓'],
-    '鳥': ['烏', '馬', '島', '焉', '梟'],
-    '烏': ['鳥', '馬', '焉', '黑', '嗚'],
-    '午': ['牛', '干', '千', '乍', '年'],
-    '牛': ['午', '半', '手', '生', '车'],
-    '手': ['毛', '牛', '乎', '于', '才'],
-    '毛': ['手', '笔', '尾'],
-    '水': ['氷', '永', '木', '火', '求'],
-    '永': ['水', '氷', '求'],
-    '名': ['各', '多', '召', '呂', '句'],
-    '各': ['名', '路', '客'],
-    '刀': ['力', '刁', '刃', '方', '万'],
-    '力': ['刀', '办', '加'],
-    '辦': ['辨', '瓣', '辯', '力'],
-    '因': ['困', '回', '囚', '固'],
-    '困': ['因', '回', '囚', '固'],
-    '回': ['因', '困', '囚', '面'],
-    '拆': ['折', '析', '訴', '听'],
-    '折': ['拆', '析', '近'],
-    '買': ['賣', '貝', '具', '實'],
-    '賣': ['買', '讀', '續'],
-    '晴': ['睛', '情', '請', '清', '精'],
-    '睛': ['晴', '情', '請', '清'],
-    '情': ['晴', '睛', '請', '清', '惜'],
-    '請': ['情', '晴', '睛', '清'],
-    '清': ['情', '晴', '睛', '請', '青'],
-    '青': ['清', '情', '晴', '睛', '請'],
-    '今': ['令', '含', '念', '介'],
-    '令': ['今', '含', '念'],
-    '免': ['兔', '象', '色', '晚'],
-    '兔': ['免', '象', '晚'],
-    '冷': ['令', '今', '冰', '治'],
-    '治': ['冷', '冶', '台'],
-    '冶': ['治', '冷', '台']
-};
+    <!-- ==================== 3. 遊戲介面 ==================== -->
+    <div id="gameContainer" class="hidden relative w-full h-screen bg-black overflow-hidden">
+        <canvas id="gameCanvas"></canvas>
 
-const COMMON_CHARS = "的一是在不了有和人這中大為上個國我向要他時來用們生到作地於出就分對成會可主發年動同工也能下過子說產種面而方後多定行學法所民得經十三之進著等部度家更完樣今育提求治以流現五內聖";
-
-const DIFFICULTY_SETTINGS = {
-    'easy': { speedMod: 0.7, score: 10, spawnMod: 1.2 },
-    'medium': { speedMod: 1.0, score: 20, spawnMod: 1.0 },
-    'hard': { speedMod: 1.5, score: 30, spawnMod: 0.8 }
-};
-
-const Game = {
-    canvas: document.getElementById('gameCanvas'),
-    ctx: null,
-    width: 0,
-    height: 0,
-    state: 'start', 
-    paused: false,
-    score: 0,
-    
-    // Config
-    gameDuration: 60,
-    remainingTime: 60,
-    lastTime: 0,
-    currentDifficulty: 'medium',
-    currentCharacter: 'pikachu',
-
-    // Level System
-    targetList: ['愛', '我', '人'],
-    currentTargetIndex: 0,
-    targetChar: '愛',
-    distractors: [],
-    levelProgress: 0,
-    HITS_TO_ADVANCE: 5,
-    
-    // Game Entities
-    player: { x: 0, y: 0, width: 64, height: 64, speed: 7, shockTimer: 0 },
-    enemies: [],
-    particles: [],
-    
-    // Input
-    keys: { ArrowLeft: false, ArrowRight: false },
-    touchX: null,
-    
-    // Settings
-    frame: 0,
-    gameSpeed: 2,
-    
-    // Speech Unlock Flag
-    speechUnlocked: false,
-
-    init() {
-        this.ctx = this.canvas.getContext('2d');
-        this.ctx.imageSmoothingEnabled = false;
-        
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') this.togglePause();
-            this.keys[e.key] = true;
-        });
-        window.addEventListener('keyup', (e) => this.keys[e.key] = false);
-        
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.playSound('silent');
-        }, {passive: false});
-
-        this.canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            let targetX = touch.clientX - rect.left - this.player.width / 2;
-            this.player.x = targetX;
-            if (this.player.x < 0) this.player.x = 0;
-            if (this.player.x > this.width - this.player.width) this.player.x = this.width - this.player.width;
-        }, {passive: false});
-        
-        const isShared = this.checkURLParams();
-        
-        this.updateDistractorsPreview();
-        
-        // Based on URL, go to Setup Screen with specific mode
-        if (isShared) {
-            this.showSetupScreen(true);
-        } else {
-            this.showMenu();
-        }
-        
-        this.loop(0);
-    },
-    
-    checkURLParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const sharedWords = urlParams.get('words');
-        const sharedTime = urlParams.get('time');
-        
-        let configFound = false;
-        
-        if (sharedWords) {
-            try {
-                const decoded = decodeURIComponent(sharedWords);
-                if (decoded.length > 0) {
-                    this.targetList = decoded.split('');
-                    configFound = true;
-                }
-            } catch(e) {
-                console.error("Error parsing words", e);
-            }
-        }
-        
-        if (sharedTime) {
-            const t = parseInt(sharedTime);
-            if (!isNaN(t) && t > 0) {
-                this.gameDuration = t;
-            }
-        }
-        
-        document.getElementById('target-input').value = this.targetList.join('');
-        document.getElementById('time-input').value = this.gameDuration;
-        
-        return configFound;
-    },
-
-    resize() {
-        this.width = Math.min(window.innerWidth, 600); 
-        this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        this.ctx.imageSmoothingEnabled = false; 
-        if (this.player) {
-            this.player.y = this.height - 100;
-            this.player.x = this.width / 2 - this.player.width / 2;
-        }
-    },
-
-    generateDistractors(target) {
-        let similar = CONFUSING_DB[target];
-        let result = [];
-        if (similar) result = [...similar];
-        
-        while (result.length < 5) {
-            const keys = Object.keys(CONFUSING_DB);
-            const randomKey = keys[Math.floor(Math.random() * keys.length)];
-            const randomConfusing = CONFUSING_DB[randomKey][0]; 
+        <!-- UI 顯示 -->
+        <div class="ui-layer">
+            <div class="flex justify-between items-start">
+                <div class="bg-black/50 p-2 rounded border border-white/30">
+                    <div class="text-xl text-yellow-300">目標: <span id="targetWordDisplay" class="text-3xl font-bold text-white ml-2">準備中...</span></div>
+                    <div class="text-sm text-gray-300 mt-1">進度: <span id="progressDisplay">0</span>/5</div>
+                </div>
+                <div class="bg-black/50 p-2 rounded border border-white/30 text-right">
+                    <div class="text-xl text-green-400">分數: <span id="scoreDisplay" class="text-3xl font-bold text-white">0</span></div>
+                    <div class="text-xl text-red-400">時間: <span id="timeDisplay" class="text-3xl font-bold text-white">60</span></div>
+                </div>
+            </div>
             
-            let charToAdd = randomConfusing;
-            
-            if (Math.random() > 0.7) {
-                charToAdd = COMMON_CHARS[Math.floor(Math.random() * COMMON_CHARS.length)];
-            }
+            <!-- 暫停按鈕 -->
+            <div class="interactive-layer absolute top-2 right-1/2 translate-x-1/2">
+                <button onclick="togglePause()" id="pauseBtn" class="bg-yellow-600 p-2 rounded-full border-2 border-white w-12 h-12 flex items-center justify-center font-bold text-xl">
+                    II
+                </button>
+            </div>
 
-            if (charToAdd !== target && !result.includes(charToAdd)) {
-                result.push(charToAdd);
-            }
-        }
-        return result.sort(() => Math.random() - 0.5).slice(0, 5);
-    },
-
-    showMenu() {
-        this.state = 'start';
-        this.toggleUIScreens('start-screen');
-    },
-    
-    showSetupScreen(isStudent) {
-        this.state = 'start';
-        this.toggleUIScreens('setup-screen');
-        // Show/Hide Teacher Message
-        const msg = document.getElementById('teacher-msg');
-        msg.style.display = isStudent ? 'block' : 'none';
-    },
-
-    showTeacherPanel() {
-        this.state = 'setup';
-        this.toggleUIScreens('teacher-screen');
-        document.getElementById('share-section').style.display = 'none';
-        this.updateDistractorsPreview();
-    },
-    
-    toggleUIScreens(activeId) {
-        const screens = ['start-screen', 'setup-screen', 'teacher-screen', 'game-over-screen'];
-        screens.forEach(id => {
-            const el = document.getElementById(id);
-            if (id === activeId) el.classList.remove('hidden');
-            else el.classList.add('hidden');
-        });
-        document.getElementById('toast-message').classList.remove('toast-visible');
-        document.getElementById('pause-overlay').classList.add('hidden');
-        document.getElementById('pause-btn').style.display = (activeId === '') ? 'flex' : 'none'; 
-    },
-    
-    generateShareLink() {
-        const input = document.getElementById('target-input').value.trim();
-        const timeInput = parseInt(document.getElementById('time-input').value);
-        
-        if (!input || input.length === 0) {
-            alert("請先輸入題目文字！");
-            return;
-        }
-        
-        const cleanInput = input.replace(/\s/g, '');
-        const baseUrl = window.location.href.split('?')[0];
-        const newUrl = `${baseUrl}?words=${encodeURIComponent(cleanInput)}&time=${timeInput}`;
-        
-        const shareSection = document.getElementById('share-section');
-        const qrImg = document.getElementById('qr-code-img');
-        const linkBox = document.getElementById('share-link-box');
-        
-        shareSection.style.display = 'block';
-        linkBox.value = newUrl;
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(newUrl)}`;
-        
-        const panel = document.querySelector('.panel');
-        setTimeout(() => { panel.scrollTop = panel.scrollHeight; }, 100);
-    },
-
-    updateDistractorsPreview() {
-        const input = document.getElementById('target-input').value.replace(/\s/g, ''); 
-        const container = document.getElementById('distractor-container');
-        if (!input) {
-            container.innerHTML = '請輸入文字';
-            return;
-        }
-        
-        let html = '<div style="font-size:0.8rem; width:100%; margin-bottom:5px;">預覽目標字列表:</div>';
-        const chars = input.split('').filter((item, pos, self) => self.indexOf(item) == pos);
-        chars.forEach(c => {
-            html += `<span class="target-tag">${c}</span>`;
-        });
-        container.innerHTML = html;
-    },
-
-    saveSettings() {
-        const input = document.getElementById('target-input').value.trim();
-        const timeInput = parseInt(document.getElementById('time-input').value);
-        
-        if (input && input.length > 0 && !isNaN(timeInput) && timeInput > 0) {
-            const cleanInput = input.replace(/\s/g, '');
-            this.targetList = cleanInput.split('');
-            this.gameDuration = timeInput;
-            // Instead of starting game directly, go to setup screen so teacher can test choices
-            this.showSetupScreen(false);
-        } else {
-            alert("請輸入有效的文字與時間");
-        }
-    },
-
-    setCurrentTarget(char) {
-        this.targetChar = char;
-        this.distractors = this.generateDistractors(char);
-        document.getElementById('current-target-char').innerText = this.targetChar;
-        document.getElementById('level-progress').innerText = `進度: ${this.levelProgress}/${this.HITS_TO_ADVANCE}`;
-        
-        this.announceTarget(char);
-    },
-    
-    unlockSpeech() {
-        if (!this.speechUnlocked && 'speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(''); 
-            window.speechSynthesis.speak(utterance);
-            this.speechUnlocked = true;
-        }
-    },
-    
-    announceTarget(char) {
-        if ('speechSynthesis' in window) {
-            setTimeout(() => {
-                if (this.state !== 'playing' || this.paused) return;
-
-                const text = `${char}，${char}，${char}`;
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.volume = 1;
-                utterance.rate = 0.8; 
+            <!-- 手機版操作介面 -->
+            <div id="mobileControls" class="absolute bottom-4 left-0 w-full px-4 justify-between items-end pb-4 interactive-layer">
+                <!-- 左側：十字鍵 (簡化為左右上) -->
+                <div class="flex gap-2">
+                    <div class="flex flex-col gap-2">
+                         <button id="btnUp" class="d-pad-btn w-16 h-16">▲</button>
+                         <div class="flex gap-2">
+                             <button id="btnLeft" class="d-pad-btn w-16 h-16">◀</button>
+                             <button id="btnDown" class="d-pad-btn w-16 h-16">▼</button>
+                             <button id="btnRight" class="d-pad-btn w-16 h-16">▶</button>
+                         </div>
+                    </div>
+                </div>
                 
-                window.speechSynthesis.cancel(); 
-                window.speechSynthesis.speak(utterance);
-            }, 1000);
-        }
-    },
-    
-    togglePause() {
-        if (this.state !== 'playing') return;
-        this.paused = !this.paused;
-        const pauseBtn = document.getElementById('pause-btn');
-        const pauseOverlay = document.getElementById('pause-overlay');
+                <!-- 右側：跳躍按鈕 -->
+                <div>
+                    <button id="btnJump" class="bg-red-600/80 border-4 border-red-800 rounded-full w-24 h-24 text-white font-bold text-xl active:scale-95 shadow-lg">
+                        跳躍
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 暫停遮罩 -->
+        <div id="pauseOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-black/70 z-40 flex items-center justify-center">
+            <h2 class="text-5xl font-bold text-white tracking-widest">PAUSED</h2>
+        </div>
+
+        <!-- 遊戲結束遮罩 -->
+        <div id="gameOverOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-black/90 z-50 flex flex-col items-center justify-center">
+            <h2 class="text-5xl font-bold text-yellow-500 mb-4">GAME OVER</h2>
+            <p class="text-3xl text-white mb-8">最終得分: <span id="finalScore">0</span></p>
+            <button onclick="location.reload()" class="px-8 py-4 bg-blue-600 rounded text-2xl font-bold hover:bg-blue-500">再玩一次</button>
+        </div>
+    </div>
+
+    <!-- 腳本邏輯 -->
+    <script>
+        // ==================== 全域變數與設定 ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         
-        if (this.paused) {
-            pauseBtn.innerText = "▶";
-            pauseBtn.style.background = "#2ecc71"; 
-            pauseOverlay.classList.remove('hidden');
-        } else {
-            pauseBtn.innerText = "||";
-            pauseBtn.style.background = "#e74c3c"; 
-            pauseOverlay.classList.add('hidden');
-            this.unlockSpeech();
-        }
-    },
-
-    getSelectedOptions() {
-        const diffRadios = document.getElementsByName('setup-diff-select');
-        for (const r of diffRadios) {
-            if (r.checked) this.currentDifficulty = r.value;
-        }
-        
-        const charRadios = document.getElementsByName('setup-char-select');
-        for (const r of charRadios) {
-            if (r.checked) this.currentCharacter = r.value;
-        }
-    },
-    
-    startFromSetup() {
-        this.getSelectedOptions();
-        this._startGameLogic();
-    },
-    
-    restart() {
-        this._startGameLogic();
-    },
-
-    _startGameLogic() {
-        this.unlockSpeech();
-        this.playSound('silent'); 
-        
-        this.score = 0;
-        this.frame = 0;
-        const settings = DIFFICULTY_SETTINGS[this.currentDifficulty];
-        this.gameSpeed = 2 * settings.speedMod;
-        
-        this.remainingTime = this.gameDuration;
-        this.enemies = [];
-        this.particles = [];
-        this.paused = false;
-        this.player.shockTimer = 0;
-        
-        document.getElementById('pause-btn').innerText = "||";
-        document.getElementById('pause-btn').style.background = "#e74c3c";
-        document.getElementById('pause-overlay').classList.add('hidden');
-        
-        this.resize(); 
-        
-        if (this.targetList.length === 0) {
-            this.targetList = ['愛', '我', '人']; 
-        }
-        
-        this.currentTargetIndex = 0;
-        this.levelProgress = 0;
-        this.setCurrentTarget(this.targetList[0]);
-
-        document.getElementById('score-board').innerText = "分數: 0";
-        document.getElementById('timer-board').innerText = "時間: " + this.remainingTime;
-        
-        this.toggleUIScreens(''); 
-        document.getElementById('pause-btn').style.display = 'flex'; 
-        
-        this.lastTime = performance.now();
-        this.state = 'playing';
-    },
-
-    gameOver() {
-        this.state = 'gameover';
-        document.getElementById('final-score').innerText = "得分: " + this.score;
-        this.toggleUIScreens('game-over-screen');
-    },
-
-    levelUp() {
-        const toast = document.getElementById('toast-message');
-        toast.innerText = "下一關！換字囉！";
-        toast.classList.add('toast-visible');
-        setTimeout(() => {
-            toast.classList.remove('toast-visible');
-        }, 1500);
-
-        this.playSound('levelup');
-
-        this.currentTargetIndex++;
-        if (this.currentTargetIndex >= this.targetList.length) {
-            this.currentTargetIndex = 0; 
-        }
-        this.levelProgress = 0;
-        this.setCurrentTarget(this.targetList[this.currentTargetIndex]);
-        
-        this.enemies.forEach(e => {
-             this.createParticles(e.x + e.width/2, e.y + e.height/2, '#fff');
-        });
-        this.enemies = []; 
-    },
-
-    spawnEnemy() {
-        const x = Math.random() * (this.width - 60);
-        const isCorrect = Math.random() > 0.6; 
-        
-        let char = this.targetChar;
-        if (!isCorrect) {
-            char = this.distractors[Math.floor(Math.random() * this.distractors.length)];
-        }
-
-        this.enemies.push({
-            x: x,
-            y: -60,
-            width: 60, 
-            height: 60,
-            char: char,
-            isCorrect: isCorrect,
-            speed: Math.random() * 2 + this.gameSpeed
-        });
-    },
-
-    createParticles(x, y, color) {
-        for(let i=0; i<10; i++) {
-            this.particles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.5) * 8,
-                life: 40,
-                color: color
-            });
-        }
-    },
-    
-    triggerShock() {
-        this.player.shockTimer = 30; 
-    },
-
-    checkCollision(rect1, rect2) {
-        return (rect1.x < rect2.x + rect2.width &&
-                rect1.x + rect1.width > rect2.x &&
-                rect1.y < rect2.y + rect2.height &&
-                rect1.y + rect1.height > rect2.y);
-    },
-
-    speak(text) {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-TW'; 
-            utterance.volume = 1; 
-            utterance.rate = 0.9; 
-            window.speechSynthesis.cancel(); 
-            window.speechSynthesis.speak(utterance);
-        }
-    },
-
-    update(timestamp) {
-        if (this.state !== 'playing' || this.paused) {
-            this.lastTime = timestamp; 
-            return;
-        }
-
-        const deltaTime = timestamp - this.lastTime;
-        if (deltaTime >= 1000) {
-            this.remainingTime--;
-            document.getElementById('timer-board').innerText = "時間: " + this.remainingTime;
-            this.lastTime = timestamp;
-            if (this.remainingTime <= 0) {
-                this.gameOver();
-                return;
-            }
-        }
-
-        this.frame++;
-        
-        if (this.player.shockTimer > 0) this.player.shockTimer--;
-
-        if (this.frame % 600 === 0) {
-            this.gameSpeed += 0.2;
-        }
-
-        // Spawn rate based on difficulty
-        const settings = DIFFICULTY_SETTINGS[this.currentDifficulty];
-        const spawnRate = Math.floor(60 * settings.spawnMod / (this.gameSpeed * 0.4));
-        
-        if (this.frame % spawnRate === 0) {
-            this.spawnEnemy();
-        }
-
-        if (this.keys.ArrowLeft && this.player.x > 0) this.player.x -= this.player.speed;
-        if (this.keys.ArrowRight && this.player.x < this.width - this.player.width) this.player.x += this.player.speed;
-
-        const playerHitbox = {
-            x: this.player.x + 10,
-            y: this.player.y + 10,
-            width: this.player.width - 20,
-            height: this.player.height - 20
+        // 遊戲核心狀態
+        let gameState = {
+            mode: 'menu', 
+            score: 0,
+            timeLeft: 0,
+            words: [],
+            currentWordIndex: 0,
+            currentProgress: 0,
+            targetCount: 5,
+            difficulty: 'medium',
+            spawnInterval: 2500, // 產生間隔 (毫秒)
+            lastSpawnTime: 0,
+            
+            // 物理相關
+            gravity: 0.6, // 重力微增，讓跳躍手感更紮實
+            
+            // 實體
+            platforms: [],
+            ladders: [],
+            entities: [], // 語詞(木桶)
+            player: { 
+                x: 0, y: 0, width: 40, height: 40, 
+                vx: 0, vy: 0, 
+                speed: 5, 
+                jumpPower: -10, // 跳躍力道降低 (從-12改為-10)，避免跳太高
+                grounded: false, climbing: false,
+                characterType: 'mario',
+                facingRight: true,
+                iframe: 0 // 無敵時間
+            },
+            
+            animationId: null,
+            lastTime: 0
         };
 
-        let levelUpTriggered = false;
+        // 模擬 AI 形似字字典
+        const SIMILAR_CHARS = {
+            '大': ['太', '犬', '天', '夫'], '人': ['入', '八', '乂', '又'], '日': ['曰', '目', '田', '白'],
+            '王': ['玉', '主', '土', '干'], '愛': ['受', '慶', '暖', '憂'], '看': ['着', '春', '眉', '盾'],
+            '我': ['找', '戔', '武', '成'], '高': ['亮', '亭', '商', '育'], '學': ['字', '季', '孛', '孝'],
+            '電': ['雷', '申', '由', '甲'], '貓': ['豬', '狗', '描', '瞄'], '車': ['東', '軍', '庫', '連'],
+            '書': ['畫', '晝', '盡', '筆'], '好': ['妈', '如', '奸', '奶'],
+        };
+        const COMMON_CHARS = "的一是在不了有和人這中大為上個國我向要他時來用們生到作地於出就分對可學主成家如信代正方此部同理起使看";
 
-        for (let i = this.enemies.length - 1; i >= 0; i--) {
-            let e = this.enemies[i];
+        // 角色定義
+        const CHARACTERS = {
+            'mario': { name: '瑪利歐風', colors: ['#ff0000', '#0000ff'], icon: 'M' },
+            'superman': { name: '超人風', colors: ['#0000ff', '#ff0000'], icon: 'S' },
+            'superwoman': { name: '女超人風', colors: ['#3366ff', '#ff3333'], icon: 'W' },
+            'ironman': { name: '鋼鐵人風', colors: ['#ffcc00', '#cc0000'], icon: 'I' },
+            'blackwidow': { name: '黑寡婦風', colors: ['#000000', '#ff0000'], icon: 'B' },
+            'pokeball': { name: '寶可球風', colors: ['#ff0000', '#ffffff'], icon: 'O' },
+            'princess': { name: '公主風', colors: ['#ff69b4', '#ffff00'], icon: 'P' },
+        };
+
+        // ==================== 音效系統 ====================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
             
-            if (!e) continue;
+            if (type === 'jump') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gainNode.gain.setValueAtTime(0.05, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'collect') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'hit') { // 被撞到
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.2);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'levelUp') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.setValueAtTime(600, now + 0.1);
+                osc.frequency.setValueAtTime(800, now + 0.2);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+        }
 
-            e.y += e.speed;
+        function speakWord(text, repeat = 1) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9; 
+                utterance.pitch = 1.1;
+                for(let i=0; i<repeat; i++) {
+                    window.speechSynthesis.speak(utterance);
+                    if(i < repeat-1) {
+                         const pause = new SpeechSynthesisUtterance('');
+                         pause.pause = 0.3;
+                         window.speechSynthesis.speak(pause);
+                    }
+                }
+            }
+        }
 
-            if (this.checkCollision(playerHitbox, e)) {
-                this.enemies.splice(i, 1);
+        // ==================== 初始化與地圖生成 ====================
+
+        window.onload = function() {
+            initCharSelect();
+            checkUrlParams();
+            document.getElementById('inputWords').addEventListener('input', updateAiPreview);
+            updateAiPreview();
+            window.addEventListener('resize', resizeGame);
+            resizeGame();
+            setupMobileControls();
+        };
+
+        function resizeGame() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if(gameState.mode === 'playing') {
+                generateLevel(); // 重繪地圖以適應新尺寸
+            }
+        }
+
+        // 生成 Z 字形關卡
+        function generateLevel() {
+            gameState.platforms = [];
+            gameState.ladders = [];
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            const floors = 6; // 地板層數
+            const floorHeight = h / floors;
+            
+            // 地板厚度
+            const pHeight = 20;
+
+            for(let i = 0; i < floors; i++) {
+                let y = h - (i * floorHeight) - 30; // 從底部往上
+                let width = w * 0.9; // 90% 寬度
+                let x = 0;
+
+                // 奇數層靠左，偶數層靠右 (造成Z字形缺口)
                 
-                if (e.isCorrect) {
-                    const pts = DIFFICULTY_SETTINGS[this.currentDifficulty].score;
-                    this.score += pts;
-                    this.levelProgress++;
-                    this.createParticles(e.x + e.width/2, e.y + e.height/2, '#f1c40f');
-                    this.playSound('catch_good');
-                    this.speak(e.char); 
-                    
-                    if (this.levelProgress >= this.HITS_TO_ADVANCE) {
-                        this.levelUp();
-                        levelUpTriggered = true;
+                if (i === 0) {
+                    // 最底層：全寬
+                    x = 0;
+                    width = w; 
+                } else if (i % 2 !== 0) {
+                    x = 0; // 靠左
+                } else {
+                    x = w - width; // 靠右
+                }
+                
+                // 創建平台
+                gameState.platforms.push({ x: x, y: y, width: width, height: pHeight, level: i });
+
+                // 創建梯子 (除了最頂層)
+                if (i < floors - 1) {
+                    if (i === 0) {
+                        gameState.ladders.push({ x: w * 0.2, y: y - floorHeight + pHeight, width: 40, height: floorHeight });
+                        gameState.ladders.push({ x: w * 0.8, y: y - floorHeight + pHeight, width: 40, height: floorHeight });
                     } else {
-                        document.getElementById('level-progress').innerText = `進度: ${this.levelProgress}/${this.HITS_TO_ADVANCE}`;
+                        let ladX = (i % 2 !== 0) ? w * 0.7 : w * 0.3; 
+                        gameState.ladders.push({ x: ladX, y: y - floorHeight + pHeight, width: 40, height: floorHeight });
+                    }
+                }
+            }
+            
+            // 設定玩家初始位置 (最底層左側)
+            gameState.player.x = 50;
+            gameState.player.y = h - 80;
+            gameState.player.grounded = true;
+        }
+
+        // ==================== 遊戲邏輯 ====================
+
+        function startGame() {
+            document.getElementById('studentMenu').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            
+            gameState.score = 0;
+            gameState.currentWordIndex = 0;
+            gameState.currentProgress = 0;
+            gameState.entities = [];
+            gameState.mode = 'playing';
+            gameState.timeLeft = parseInt(document.getElementById('inputTime').value) || 120;
+            if(gameState.words.length === 0) gameState.words = ["大金剛", "遊戲", "測試"]; // 防呆
+
+            generateLevel();
+            startLevel(true);
+
+            if (gameState.animationId) cancelAnimationFrame(gameState.animationId);
+            gameState.lastTime = performance.now();
+            gameLoop(gameState.lastTime);
+            
+            startTimer();
+        }
+
+        function startLevel(isNewGame = false) {
+            gameState.currentProgress = 0;
+            updateUI();
+            const target = gameState.words[gameState.currentWordIndex];
+            speakWord(target, 3);
+            
+            const targetDisplay = document.getElementById('targetWordDisplay');
+            targetDisplay.classList.add('flash');
+            setTimeout(() => targetDisplay.classList.remove('flash'), 1500);
+
+            if (!isNewGame) playSound('levelUp');
+        }
+
+        let timerInterval;
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (gameState.mode === 'playing') {
+                    gameState.timeLeft--;
+                    updateUI();
+                    if (gameState.timeLeft <= 0) endGame();
+                }
+            }, 1000);
+        }
+
+        function spawnEntity() {
+            // 從最頂層平台丟出
+            const topPlat = gameState.platforms[gameState.platforms.length - 1];
+            const target = gameState.words[gameState.currentWordIndex];
+            
+            const isTarget = Math.random() > 0.6; // 40% 正確
+            let text = isTarget ? target : getSimilarWords(target, 3)[Math.floor(Math.random()*3)];
+            let type = isTarget ? 'correct' : 'wrong';
+
+            // 實體初始狀態
+            let ent = {
+                x: topPlat.x + 50, // 大金剛的位置
+                y: topPlat.y - 40,
+                width: 40, height: 40,
+                vx: 3, // 初始向右
+                vy: 0,
+                text: text,
+                type: type,
+                grounded: false,
+                color: type === 'correct' ? '#4CAF50' : '#FF5252',
+                rotation: 0 // 新增旋轉角度
+            };
+            gameState.entities.push(ent);
+        }
+
+        function update(dt) {
+            const p = gameState.player;
+
+            // 1. 生成語詞
+            if (performance.now() - gameState.lastSpawnTime > gameState.spawnInterval) {
+                spawnEntity();
+                gameState.lastSpawnTime = performance.now();
+            }
+
+            // 2. 玩家物理
+            // 輸入處理
+            let dx = 0;
+            if (keys['ArrowLeft'] || btnState.left) dx = -1;
+            if (keys['ArrowRight'] || btnState.right) dx = 1;
+            
+            // 爬梯子檢測
+            let onLadder = false;
+            for(let lad of gameState.ladders) {
+                if (p.x + p.width/2 > lad.x && p.x + p.width/2 < lad.x + lad.width &&
+                    p.y + p.height > lad.y && p.y < lad.y + lad.height) {
+                    onLadder = true;
+                    break;
+                }
+            }
+
+            // 攀爬邏輯
+            if (onLadder && (keys['ArrowUp'] || keys['ArrowDown'] || btnState.up || btnState.down)) {
+                p.climbing = true;
+                p.vx = 0; 
+            }
+            if (!onLadder) p.climbing = false;
+
+            if (p.climbing) {
+                if (keys['ArrowUp'] || btnState.up) p.y -= 3;
+                if (keys['ArrowDown'] || btnState.down) p.y += 3;
+                p.grounded = false; 
+            } else {
+                // 水平移動
+                p.vx = dx * p.speed;
+                p.x += p.vx;
+                
+                // 跳躍
+                if ((keys['Space'] || btnState.jump) && p.grounded) {
+                    p.vy = p.jumpPower;
+                    p.grounded = false;
+                    playSound('jump');
+                    keys['Space'] = false; 
+                    btnState.jump = false;
+                }
+
+                // 重力
+                p.vy += gameState.gravity;
+                p.y += p.vy;
+            }
+
+            // 玩家平台碰撞
+            p.grounded = false;
+            if (!p.climbing && p.vy >= 0) {
+                for(let plat of gameState.platforms) {
+                    if (p.x + p.width > plat.x && p.x < plat.x + plat.width &&
+                        p.y + p.height >= plat.y && p.y + p.height <= plat.y + plat.height + 15) { // 加大容許範圍
+                        
+                        p.y = plat.y - p.height;
+                        p.vy = 0;
+                        p.grounded = true;
+                        break;
+                    }
+                }
+            }
+            
+            // 邊界限制
+            if(p.x < 0) p.x = 0;
+            if(p.x > canvas.width - p.width) p.x = canvas.width - p.width;
+            if(p.y > canvas.height) p.y = canvas.height - p.height; 
+
+            // 面向
+            if(dx !== 0) p.facingRight = dx > 0;
+
+            if(p.iframe > 0) p.iframe--;
+
+            // 3. 實體(語詞)物理與邏輯
+            for (let i = gameState.entities.length - 1; i >= 0; i--) {
+                let ent = gameState.entities[i];
+                
+                // 增加旋轉角度 (根據水平速度 vx)
+                ent.rotation += ent.vx * 0.1;
+
+                // 重力
+                ent.vy += gameState.gravity;
+                ent.y += ent.vy;
+                ent.x += ent.vx;
+
+                // 平台碰撞
+                let onPlat = false;
+                let currentPlat = null;
+                if (ent.vy >= 0) {
+                    for(let plat of gameState.platforms) {
+                         if (ent.x + ent.width > plat.x && ent.x < plat.x + plat.width &&
+                             ent.y + ent.height >= plat.y && ent.y + ent.height <= plat.y + plat.height + 15) {
+                             
+                             ent.y = plat.y - ent.height;
+                             ent.vy = 0;
+                             onPlat = true;
+                             ent.grounded = true;
+                             currentPlat = plat;
+                             break;
+                         }
+                    }
+                }
+                
+                // 是否在最底層?
+                const isBottomFloor = (ent.y > canvas.height - 150);
+
+                if (!onPlat) {
+                    ent.grounded = false;
+                }
+                
+                // 牆壁反彈：只有在「不是」最底層時才反彈
+                if (!isBottomFloor) {
+                    if (ent.x <= 0 || ent.x >= canvas.width - ent.width) {
+                        ent.vx *= -1;
                     }
                 } else {
-                    this.score -= 5;
-                    this.createParticles(e.x + e.width/2, e.y + e.height/2, '#e74c3c');
-                    this.playSound('catch_bad');
-                    this.triggerShock(); 
+                    // 如果是最底層，且滾出螢幕，則移除
+                    if (ent.x < -100 || ent.x > canvas.width + 100) {
+                        gameState.entities.splice(i, 1);
+                        continue;
+                    }
                 }
-                document.getElementById('score-board').innerText = "分數: " + this.score;
                 
-                if (levelUpTriggered) break; 
-                continue; 
-            }
+                // 掉落到螢幕外移除 (防呆)
+                if (ent.y > canvas.height + 50) {
+                     gameState.entities.splice(i, 1);
+                     continue;
+                }
 
-            if (e.y > this.height) {
-                if (i < this.enemies.length && this.enemies[i] === e) {
-                   this.enemies.splice(i, 1);
+                // 玩家與語詞碰撞
+                if (isColliding(p, ent)) {
+                    if (ent.type === 'correct') {
+                        // 得分
+                        gameState.score += 20;
+                        gameState.currentProgress++;
+                        playSound('collect');
+                        gameState.entities.splice(i, 1);
+                        
+                        if (gameState.currentProgress >= gameState.targetCount) {
+                            gameState.currentWordIndex = (gameState.currentWordIndex + 1) % gameState.words.length;
+                            startLevel();
+                        }
+                    } else if (ent.type === 'wrong') {
+                        // 扣分/受傷
+                        if (p.iframe === 0) {
+                            gameState.score = Math.max(0, gameState.score - 10);
+                            playSound('hit');
+                            p.iframe = 60; // 1秒無敵
+                            p.vy = -5; // 擊退彈跳
+                            p.vx = (ent.x > p.x) ? -5 : 5;
+                        }
+                    }
+                    updateUI();
                 }
             }
         }
-        
-        if (levelUpTriggered) return;
 
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            let p = this.particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life--;
-            if (p.life <= 0) this.particles.splice(i, 1);
-        }
-    },
-    
-    // Universal Character Renderer
-    drawCharacter(x, y, w, h) {
-        const ctx = this.ctx;
-        const px = w / 16;
-        const type = this.currentCharacter;
-        
-        const f = (c, dx, dy, dw, dh) => { ctx.fillStyle = c; ctx.fillRect(x + dx*px, y + dy*px, dw*px, dh*px); };
-        
-        if (type === 'pikachu') {
-            f('#000', 1, 0, 2, 2); f('#000', 13, 0, 2, 2);
-            f('#F1C40F', 2, 2, 2, 3); f('#F1C40F', 12, 2, 2, 3);
-            f('#F1C40F', 3, 4, 10, 8); f('#F1C40F', 2, 6, 12, 5);
-            f('#000', 4, 6, 2, 2); f('#000', 10, 6, 2, 2);
-            f('#FFF', 5, 6.2, 0.5, 0.5); f('#FFF', 11, 6.2, 0.5, 0.5);
-            f('#E74C3C', 2, 8, 2, 2); f('#E74C3C', 12, 8, 2, 2);
-            f('#F1C40F', 4, 11, 8, 5);
-            f('#8B4513', 4, 12, 2, 1); f('#F1C40F', 1, 7, 2, 1); f('#F1C40F', 2, 8, 1, 2);
-        } 
-        else if (type === 'superman') {
-            f('#000', 4, 2, 8, 3); f('#000', 7, 3, 1, 2); 
-            f('#FFCC99', 4, 5, 8, 5);
-            f('#000', 5, 6, 1, 1); f('#000', 10, 6, 1, 1);
-            f('#3498db', 4, 10, 8, 6);
-            f('#f1c40f', 7, 11, 2, 2); f('#e74c3c', 7.5, 11.5, 1, 1);
-            f('#c0392b', 2, 11, 2, 5); f('#c0392b', 12, 11, 2, 5);
-        }
-        else if (type === 'supergirl') {
-            f('#f1c40f', 3, 2, 10, 8); 
-            f('#FFCC99', 5, 5, 6, 4);
-            f('#000', 6, 6, 1, 1); f('#000', 9, 6, 1, 1);
-            f('#3498db', 5, 10, 6, 3);
-            f('#c0392b', 4, 13, 8, 3);
-            f('#c0392b', 3, 11, 2, 4); f('#c0392b', 11, 11, 2, 4);
-        }
-        else if (type === 'ironman') {
-            f('#c0392b', 4, 3, 8, 7); 
-            f('#f1c40f', 5, 4, 6, 5); 
-            f('#fff', 5.5, 5.5, 1.5, 0.5); f('#fff', 9, 5.5, 1.5, 0.5);
-            f('#c0392b', 3, 10, 10, 6);
-            f('#3498db', 7, 11, 2, 2); f('#fff', 7.5, 11.5, 1, 1);
-        }
-        else if (type === 'blackwidow') {
-            f('#d35400', 4, 3, 8, 7); f('#d35400', 2, 5, 3, 5); f('#d35400', 11, 5, 3, 5);
-            f('#FFCC99', 5, 5, 6, 4);
-            f('#2c3e50', 5, 10, 6, 6);
-            f('#c0392b', 7, 12, 2, 1);
-        }
-        else if (type === 'pokeball') {
-            f('#c0392b', 3, 3, 10, 5);
-            f('#ecf0f1', 3, 8, 10, 5);
-            f('#2c3e50', 3, 7.5, 10, 1);
-            f('#ecf0f1', 7, 7, 2, 2); f('#2c3e50', 7.5, 7.5, 1, 1);
-        }
-        else if (type === 'princess') {
-            f('#f1c40f', 5, 2, 6, 2);
-            f('#8e44ad', 4, 4, 8, 6);
-            f('#FFCC99', 5, 5, 6, 4);
-            f('#e056fd', 4, 10, 8, 6); f('#e056fd', 2, 12, 12, 4);
-        }
-        else if (type === 'mario') {
-            f('#c0392b', 3, 3, 10, 2); f('#c0392b', 3, 3, 6, 3);
-            f('#FFCC99', 4, 5, 7, 4);
-            f('#000', 6, 7, 4, 1); f('#000', 6, 7, 1, 0.5);
-            f('#c0392b', 4, 9, 8, 2); 
-            f('#3498db', 5, 11, 6, 5);
-            f('#f1c40f', 5, 12, 1, 1); f('#f1c40f', 10, 12, 1, 1);
+        function isColliding(a, b) {
+            // 縮小碰撞箱，讓躲避更容易
+            const padding = 5;
+            return a.x + padding < b.x + b.width - padding &&
+                   a.x + a.width - padding > b.x + padding &&
+                   a.y + padding < b.y + b.height - padding &&
+                   a.y + a.height - padding > b.y + padding;
         }
 
-        // Shock Effect Overlay
-        if (this.player.shockTimer > 0) {
-            this.ctx.strokeStyle = (Math.floor(this.frame / 2) % 2 === 0) ? '#FFFF00' : '#87CEEB';
-            this.ctx.lineWidth = 3;
-            this.ctx.beginPath();
-            for (let i = 0; i < 8; i++) {
-                let angle = (i / 8) * Math.PI * 2;
-                let r = w/1.5 + Math.random() * 10;
-                let sx = x + w/2 + Math.cos(angle) * r;
-                let sy = y + h/2 + Math.sin(angle) * r;
-                if (i===0) this.ctx.moveTo(sx, sy);
-                else this.ctx.lineTo(sx, sy);
+        function draw() {
+            // 背景
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製鋼樑
+            ctx.fillStyle = '#ff00ff'; // 粉紅鋼樑
+            for(let plat of gameState.platforms) {
+                // 主體
+                ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+                // 桁架紋理
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(plat.x, plat.y + plat.height/2);
+                ctx.lineTo(plat.x + plat.width, plat.y + plat.height/2);
+                ctx.stroke();
+                // 斜線
+                ctx.beginPath();
+                for(let k=0; k<plat.width; k+=20) {
+                    ctx.moveTo(plat.x + k, plat.y);
+                    ctx.lineTo(plat.x + k + 10, plat.y + plat.height);
+                }
+                ctx.stroke();
             }
-            this.ctx.closePath();
-            this.ctx.stroke();
+
+            // 繪製梯子
+            ctx.fillStyle = '#00ffff'; // 藍色梯子
+            for(let lad of gameState.ladders) {
+                ctx.fillRect(lad.x, lad.y, 4, lad.height); // 左桿
+                ctx.fillRect(lad.x + lad.width - 4, lad.y, 4, lad.height); // 右桿
+                // 橫桿
+                for(let ly = lad.y; ly < lad.y + lad.height; ly += 15) {
+                    ctx.fillRect(lad.x, ly, lad.width, 3);
+                }
+            }
+
+            // 繪製大金剛與公主 (頂層裝飾)
+            if (gameState.platforms.length > 0) {
+                const topP = gameState.platforms[gameState.platforms.length - 1];
+                // DK
+                drawPixelChar(ctx, 'blackwidow', topP.x + 20, topP.y - 60, 60, 60); // 借用黑色風格當DK
+                ctx.fillStyle = 'white';
+                ctx.fillText("DK", topP.x + 40, topP.y - 70);
+                
+                // Princess
+                drawPixelChar(ctx, 'princess', topP.x + 100, topP.y - 50, 40, 40);
+                ctx.fillStyle = 'yellow';
+                ctx.font = '12px Arial';
+                ctx.fillText("HELP!", topP.x + 100, topP.y - 60);
+            }
+
+            // 繪製語詞
+            for(let ent of gameState.entities) {
+                drawEntity(ent);
+            }
+
+            // 繪製玩家
+            const p = gameState.player;
+            if (p.iframe % 4 < 2) { // 閃爍效果
+                drawPixelChar(ctx, p.characterType, p.x, p.y, p.width, p.height, p.facingRight);
+            }
         }
-    },
 
-    draw() {
-        this.ctx.clearRect(0, 0, this.width, this.height);
-
-        if (this.state !== 'playing') return;
-
-        // Draw Player using the new function
-        this.drawCharacter(this.player.x, this.player.y, this.player.width, this.player.height);
-
-        // Enemies (Falling bubbles)
-        this.enemies.forEach(e => {
-            this.ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            this.ctx.beginPath();
-            this.ctx.arc(e.x + e.width/2 + 3, e.y + e.height/2 + 3, e.width/2, 0, Math.PI*2);
-            this.ctx.fill();
-
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-            this.ctx.beginPath();
-            this.ctx.arc(e.x + e.width/2, e.y + e.height/2, e.width/2, 0, Math.PI*2);
-            this.ctx.fill();
+        function drawEntity(ent) {
+            ctx.save();
             
-            this.ctx.strokeStyle = '#3498db';
-            this.ctx.lineWidth = 3; 
-            this.ctx.stroke();
+            // 移動到物件中心點
+            const centerX = ent.x + ent.width / 2;
+            const centerY = ent.y + ent.height / 2;
+            ctx.translate(centerX, centerY);
+            
+            // 旋轉背景 (滾動效果)
+            ctx.rotate(ent.rotation);
 
-            // Bigger Font (50px)
-            this.ctx.fillStyle = '#2c3e50';
-            this.ctx.font = 'bold 50px "Klee One", "BiauKai", "標楷體", "DFKai-SB", "KaiTi", "STKaiti", "Noto Serif TC", serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(e.char, e.x + e.width/2, e.y + e.height/2 + 2); 
-        });
+            // 畫桶子 (圓形)
+            ctx.beginPath();
+            ctx.arc(0, 0, ent.width/2, 0, Math.PI*2);
+            ctx.fillStyle = ent.color;
+            ctx.fill();
+            
+            // 畫桶子紋理 (十字線，讓旋轉更明顯)
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-ent.width/2, 0); ctx.lineTo(ent.width/2, 0);
+            ctx.moveTo(0, -ent.height/2); ctx.lineTo(0, ent.height/2);
+            ctx.stroke();
+            
+            // 反向旋轉回來，準備畫文字 (保持文字水平直立，方便閱讀)
+            ctx.rotate(-ent.rotation);
 
-        this.particles.forEach(p => {
-            this.ctx.fillStyle = p.color;
-            this.ctx.fillRect(p.x, p.y, 5, 5);
-        });
-    },
-
-    loop(timestamp) {
-        this.update(timestamp);
-        this.draw();
-        requestAnimationFrame((ts) => this.loop(ts));
-    },
-    
-    playSound(type) {
-        if (!window.AudioContext && !window.webkitAudioContext) return;
-        
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!this.audioCtx) this.audioCtx = new AudioContext();
-
-        const osc = this.audioCtx.createOscillator();
-        const gain = this.audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(this.audioCtx.destination);
-
-        const now = this.audioCtx.currentTime;
-        
-        if (type === 'catch_good') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(500, now);
-            osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
-            gain.gain.setValueAtTime(0.05, now); 
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-            osc.start(now);
-            osc.stop(now + 0.2);
-        } else if (type === 'catch_bad') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(100, now);
-            osc.frequency.linearRampToValueAtTime(50, now + 0.3);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        } else if (type === 'levelup') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.setValueAtTime(600, now + 0.1);
-            osc.frequency.setValueAtTime(1000, now + 0.2);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.linearRampToValueAtTime(0.1, now + 0.3);
-            gain.gain.linearRampToValueAtTime(0, now + 0.5);
-            osc.start(now);
-            osc.stop(now + 0.5);
-        } else if (type === 'silent') {
-            osc.frequency.setValueAtTime(0, now);
-            gain.gain.setValueAtTime(0, now);
-            osc.start(now);
-            osc.stop(now + 0.01);
+            // 畫文字
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 20px BiauKaiStandard, BiauKai, 標楷體";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // 添加黑邊讓文字更清楚
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.strokeText(ent.text, 0, 0);
+            ctx.fillText(ent.text, 0, 0);
+            
+            ctx.restore();
         }
-    }
-};
 
-window.onload = () => Game.init();
-</script>
+        function drawPixelChar(c, type, x, y, w, h, facingRight = true) {
+            const charData = CHARACTERS[type];
+            c.save();
+            if (!facingRight) {
+                c.translate(x + w, y);
+                c.scale(-1, 1);
+                x = 0; y = 0; // reset local coords
+            }
+            
+            // 簡易像素人繪製
+            c.fillStyle = charData.colors[0]; // 主色
+            c.fillRect(x + w*0.2, y + h*0.3, w*0.6, h*0.5); // 身
+            c.fillStyle = '#ffe0bd'; 
+            c.fillRect(x + w*0.25, y, w*0.5, h*0.3); // 頭
+            c.fillStyle = charData.colors[1];
+            c.fillRect(x + w*0.25, y, w*0.5, h*0.1); // 帽
+            
+            // 手腳
+            c.fillStyle = '#333';
+            if (gameState.player.climbing && type === gameState.player.characterType) {
+                // 爬梯動作
+                c.fillRect(x, y + h*0.2, w*0.2, h*0.3); // 左手舉高
+                c.fillRect(x + w*0.8, y + h*0.2, w*0.2, h*0.3); // 右手舉高
+            } else {
+                c.fillRect(x + w*0.2, y + h*0.8, w*0.2, h*0.2);
+                c.fillRect(x + w*0.6, y + h*0.8, w*0.2, h*0.2);
+            }
 
+            c.restore();
+        }
+
+        function gameLoop(timestamp) {
+            if (gameState.mode !== 'playing') return;
+            const dt = timestamp - gameState.lastTime;
+            gameState.lastTime = timestamp;
+            update(dt);
+            draw();
+            gameState.animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateUI() {
+            document.getElementById('scoreDisplay').innerText = gameState.score;
+            document.getElementById('timeDisplay').innerText = gameState.timeLeft;
+            document.getElementById('progressDisplay').innerText = gameState.currentProgress;
+            const currentWord = gameState.words[gameState.currentWordIndex];
+            if(currentWord) document.getElementById('targetWordDisplay').innerText = currentWord;
+        }
+
+        // ==================== 輸入控制 ====================
+        const keys = {};
+        const btnState = { up: false, down: false, left: false, right: false, jump: false };
+
+        window.addEventListener('keydown', e => { 
+            if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+            keys[e.code] = true; 
+        });
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+        // 手機虛擬按鈕
+        function setupMobileControls() {
+            const bindBtn = (id, key) => {
+                const btn = document.getElementById(id);
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); btnState[key] = true; });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); btnState[key] = false; });
+            };
+            bindBtn('btnUp', 'up');
+            bindBtn('btnDown', 'down');
+            bindBtn('btnLeft', 'left');
+            bindBtn('btnRight', 'right');
+            bindBtn('btnJump', 'jump');
+        }
+
+        // ==================== 共用邏輯 (複製自原檔) ====================
+        function getSimilarWords(target, count) {
+            let results = [];
+            for (let char of target) {
+                if (SIMILAR_CHARS[char]) {
+                    const similarChar = SIMILAR_CHARS[char][Math.floor(Math.random() * SIMILAR_CHARS[char].length)];
+                    const newWord = target.replace(char, similarChar);
+                    if (newWord !== target) results.push(newWord);
+                }
+            }
+            while (results.length < count) {
+                let randomWord = "";
+                for (let i = 0; i < target.length; i++) {
+                    if (Math.random() > 0.7) randomWord += target[i];
+                    else randomWord += COMMON_CHARS[Math.floor(Math.random() * COMMON_CHARS.length)];
+                }
+                if (randomWord !== target && !results.includes(randomWord)) results.push(randomWord);
+            }
+            return results.sort(() => Math.random() - 0.5).slice(0, count);
+        }
+        function generateGameLink() {
+            const rawWords = document.getElementById('inputWords').value;
+            const time = document.getElementById('inputTime').value;
+            const words = rawWords.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+            if (words.length === 0) { alert("請至少輸入一個語詞！"); return; }
+            const data = { w: words, t: parseInt(time) };
+            const jsonStr = JSON.stringify(data);
+            const base64 = btoa(encodeURIComponent(jsonStr));
+            const url = window.location.protocol + "//" + window.location.host + window.location.pathname + "?data=" + base64;
+            document.getElementById('shareSection').classList.remove('hidden');
+            document.getElementById('shareLink').value = url;
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById('qrcode'), { text: url, width: 128, height: 128 });
+        }
+        function copyLink() {
+            document.getElementById("shareLink").select();
+            document.execCommand("copy");
+            alert("連結已複製！");
+        }
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataStr = urlParams.get('data');
+            if (dataStr) {
+                try {
+                    const jsonStr = decodeURIComponent(atob(dataStr));
+                    const data = JSON.parse(jsonStr);
+                    gameState.words = data.w;
+                    gameState.timeLeft = data.t;
+                    document.getElementById('teacherPanel').classList.add('hidden');
+                    document.getElementById('studentMenu').classList.remove('hidden');
+                } catch (e) { console.error(e); }
+            }
+        }
+        function enterStudentMode() {
+            const rawWords = document.getElementById('inputWords').value;
+            const time = document.getElementById('inputTime').value;
+            gameState.words = rawWords.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+            gameState.timeLeft = parseInt(time);
+            document.getElementById('teacherPanel').classList.add('hidden');
+            document.getElementById('studentMenu').classList.remove('hidden');
+        }
+        function initCharSelect() {
+            const container = document.getElementById('characterSelectContainer');
+            for (const [key, char] of Object.entries(CHARACTERS)) {
+                const div = document.createElement('div');
+                div.className = `cursor-pointer p-2 border-2 border-gray-600 rounded bg-black hover:border-white flex flex-col items-center w-24`;
+                div.onclick = () => selectCharacter(key, div);
+                const cvs = document.createElement('canvas');
+                cvs.width = 40; cvs.height = 40;
+                const c = cvs.getContext('2d');
+                drawPixelChar(c, key, 0, 0, 40, 40);
+                div.appendChild(cvs);
+                const span = document.createElement('span');
+                span.innerText = char.name;
+                span.className = "text-xs mt-1 text-gray-300";
+                div.appendChild(span);
+                container.appendChild(div);
+            }
+            selectCharacter('mario', container.firstChild);
+        }
+        function selectCharacter(type, element) {
+            gameState.player.characterType = type;
+            document.querySelectorAll('#characterSelectContainer > div').forEach(el => {
+                el.classList.remove('border-yellow-400', 'bg-gray-800');
+                el.classList.add('border-gray-600', 'bg-black');
+            });
+            element.classList.remove('border-gray-600', 'bg-black');
+            element.classList.add('border-yellow-400', 'bg-gray-800');
+        }
+        function selectDifficulty(diff) {
+            gameState.difficulty = diff;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('ring-4', 'ring-white'));
+            if(diff === 'easy') { gameState.spawnInterval = 3000; gameState.player.speed = 4; }
+            else if (diff === 'medium') { gameState.spawnInterval = 2000; gameState.player.speed = 6; }
+            else { gameState.spawnInterval = 1200; gameState.player.speed = 8; }
+        }
+        function updateAiPreview() {
+            const txt = document.getElementById('inputWords').value;
+            const words = txt.split(/[\n,]+/).filter(w => w.trim() !== '');
+            if (words.length > 0) {
+                const sample = words[0];
+                const sims = getSimilarWords(sample, 5);
+                document.getElementById('aiPreview').innerHTML = `目標: <span class="text-yellow-400 font-bold">${sample}</span> <br> AI 模擬干擾: ${sims.join(', ')}`;
+            }
+        }
+        function togglePause() {
+            if (gameState.mode === 'playing') {
+                gameState.mode = 'paused';
+                document.getElementById('pauseOverlay').classList.remove('hidden');
+                document.getElementById('pauseBtn').innerHTML = "▶";
+            } else if (gameState.mode === 'paused') {
+                gameState.mode = 'playing';
+                document.getElementById('pauseOverlay').classList.add('hidden');
+                document.getElementById('pauseBtn').innerHTML = "II";
+                gameState.lastTime = performance.now();
+                gameLoop(gameState.lastTime);
+            }
+        }
+        function endGame() {
+            gameState.mode = 'gameover';
+            clearInterval(timerInterval);
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+            document.getElementById('finalScore').innerText = gameState.score;
+        }
+    </script>
 </body>
 </html>
