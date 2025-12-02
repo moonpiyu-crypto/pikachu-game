@@ -412,34 +412,55 @@
 
 <script>
 /**
- * 簡易音效控制器 (Web Audio API) - 無需外部文件
+ * 音效控制器 (Web Audio API) - 已修復移動端播放問題
  */
 const AudioController = {
     ctx: null,
+    
+    // 初始化或恢復 AudioContext
+    // 必須在使用者操作(click/touch)時呼叫
     init() {
-        window.AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.ctx = new AudioContext();
+        if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+        }
+        
+        // 如果狀態是 suspended (常見於 Chrome/iOS)，嘗試恢復
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume().then(() => {
+                console.log('AudioContext resumed successfully');
+            }).catch(e => console.error(e));
+        }
     },
+
     playTone(freq, type, duration) {
-        if (!this.ctx) this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start();
-        osc.stop(this.ctx.currentTime + duration);
+        if (!this.ctx) return; // 如果沒有 Context，直接跳過不報錯
+        
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+            console.warn("Audio play failed:", e);
+        }
     },
+    
     playGood() {
         this.playTone(600, 'sine', 0.1);
         setTimeout(() => this.playTone(800, 'sine', 0.2), 100);
     },
+    
     playBad() {
         this.playTone(150, 'sawtooth', 0.3);
     },
+    
     playLevelUp() {
         this.playTone(400, 'square', 0.1);
         setTimeout(() => this.playTone(600, 'square', 0.1), 100);
@@ -548,8 +569,8 @@ const Game = {
     keys: { ArrowLeft: false, ArrowRight: false },
     touchX: null,
     
-    // Loop
-    animationFrameId: null,
+    // Logic Flags
+    shouldLevelUp: false, // 修正卡頓問題的關鍵旗標
     spawnTimer: 0,
 
     init() {
@@ -562,6 +583,7 @@ const Game = {
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') this.togglePause();
             this.keys[e.key] = true;
+            AudioController.init(); // 鍵盤操作也嘗試解鎖音效
         });
         window.addEventListener('keyup', (e) => this.keys[e.key] = false);
         
@@ -578,11 +600,15 @@ const Game = {
         };
 
         this.canvas.addEventListener('touchstart', (e) => {
-            if(this.state === 'playing') AudioController.init(); // Init audio on first touch
-            handleTouch(e);
+            AudioController.init(); // 關鍵：觸控開始時解鎖音效
+            if(this.state === 'playing') handleTouch(e);
         }, {passive: false});
+        
         this.canvas.addEventListener('touchmove', handleTouch, {passive: false});
         
+        // Global click listener to unlock audio for desktop/other inputs
+        document.addEventListener('click', () => AudioController.init(), {once: true});
+
         // Check URL for shared config
         const isShared = this.checkURLParams();
         this.updateDistractorsPreview();
@@ -623,8 +649,7 @@ const Game = {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         if (this.player) {
-            this.player.y = this.height - 110; // Position from bottom
-            // Keep player inside screen on resize
+            this.player.y = this.height - 110; 
             if(this.player.x > this.width - this.player.width) this.player.x = this.width - this.player.width;
         }
     },
@@ -661,7 +686,7 @@ const Game = {
         this.state = 'setup';
         this.toggleUIScreens('setup-screen');
         document.getElementById('teacher-msg').style.display = isStudent ? 'block' : 'none';
-        AudioController.init();
+        AudioController.init(); // 在進入設定畫面時也嘗試初始化
     },
 
     showTeacherPanel() {
@@ -749,6 +774,7 @@ const Game = {
         this.floatTexts = [];
         this.paused = false;
         this.spawnTimer = 0;
+        this.shouldLevelUp = false;
         
         // Reset Level
         if (this.targetList.length === 0) this.targetList = ['愛', '我', '人'];
@@ -788,16 +814,27 @@ const Game = {
     },
 
     announceTarget() {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(this.targetChar);
-            u.lang = 'zh-TW';
-            u.rate = 0.8;
-            window.speechSynthesis.speak(u);
+        // 安全地使用語音合成，避免報錯
+        try {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // 清除之前的佇列，防止延遲
+                const u = new SpeechSynthesisUtterance(this.targetChar);
+                u.lang = 'zh-TW';
+                u.rate = 0.8;
+                window.speechSynthesis.speak(u);
+            }
+        } catch (e) {
+            console.warn("Speech synthesis error:", e);
         }
     },
 
     update(dt) {
+        // 如果需要升級，先暫停更新邏輯，執行升級
+        if (this.shouldLevelUp) {
+            this.executeLevelUp();
+            return;
+        }
+
         // Timer
         if (this.remainingTime > 0) {
             this.remainingTime -= dt / 1000;
@@ -825,8 +862,13 @@ const Game = {
         }
 
         // Update Enemies
+        // 使用倒序迴圈，方便刪除元素
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             let e = this.enemies[i];
+            
+            // 安全檢查：如果元素不存在，跳過
+            if (!e) continue;
+
             e.y += e.speed;
 
             // Collision
@@ -836,7 +878,13 @@ const Game = {
                 e.x < this.player.x + this.player.width - 10) {
                 
                 this.handleCollision(e);
+                
+                // 碰撞後移除該敵人
                 this.enemies.splice(i, 1);
+                
+                // 如果觸發了升級，直接中斷迴圈，避免繼續處理舊陣列
+                if (this.shouldLevelUp) break; 
+                
                 continue;
             }
 
@@ -875,7 +923,8 @@ const Game = {
             this.addFloatText(`+${points}`, this.player.x, this.player.y, '#2ecc71');
             
             if (this.levelProgress >= this.HITS_TO_ADVANCE) {
-                this.levelUp();
+                // 標記需要升級，不要在這裡直接清空 enemies 陣列
+                this.shouldLevelUp = true;
             }
         } else {
             // Wrong
@@ -889,14 +938,16 @@ const Game = {
         }
     },
 
-    levelUp() {
+    // 實際執行升級的函式，在 Update 迴圈外執行
+    executeLevelUp() {
+        this.shouldLevelUp = false;
         this.showToast("下一關！");
         AudioController.playLevelUp();
         
         this.currentTargetIndex = (this.currentTargetIndex + 1) % this.targetList.length;
         this.levelProgress = 0;
         this.setTarget(this.targetList[this.currentTargetIndex]);
-        this.enemies = []; // Clear screen
+        this.enemies = []; // 這裡安全清空
         this.announceTarget();
     },
 
